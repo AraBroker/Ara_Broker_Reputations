@@ -1,8 +1,8 @@
 local wowversion, wowbuild, wowdate, wowtocversion = GetBuildInfo()
-local wowtextversion 
-if gametocversion and gametocversion < 19999 then wowtextversion = "Classic" end 
-if gametocversion and gametocversion > 19999 and gametocversion < 90000 then wowtextversion = "Retail" end 
-if gametocversion and gametocversion > 90000 then 
+local wowtextversion
+if wowtocversion and wowtocversion < 19999 then wowtextversion = "Classic" end 
+if wowtocversion and wowtocversion > 19999 and wowtocversion < 90000 then wowtextversion = "Retail" end 
+if wowtocversion and wowtocversion > 90000 then 
 	wowtextversion      = "Beta"
 	AraBackdropTemplate = "BackdropTemplate"
 end 
