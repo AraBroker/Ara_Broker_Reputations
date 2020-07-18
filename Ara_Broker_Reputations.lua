@@ -269,6 +269,7 @@ UpdateTablet = function(self)
 	for i = 1, GetNumFactions() do
         local pValTtl = nil
 		local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
+		pNum = nil
 		if name then
 		if isHeader and not (isChild and skipChild) then
 			skip = char.collapsedHeaders[name]
@@ -286,10 +287,11 @@ UpdateTablet = function(self)
                     value   = value + currValue
                     minVal  = minVal + pMin
                     maxVal  = maxVal + pMax
+					pNum = pMin/threshold
                     level   = MAX_REPUTATION_REACTION + 1
                     standingText = levels[level]
                     isCapped = false
-                    textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+                    textValue = ("%i / %i"):format(value-minVal, maxVal-minVal)
                 end
                 -- check if this is a friendship faction 
                 local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(FactionID)
@@ -306,7 +308,11 @@ UpdateTablet = function(self)
             if isCapped then 
                 textValue = standingText
             else
-				textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+				if pNum ~= nil then
+					textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) .. ' ('..pNum..')'
+				else
+					textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+				end
 			end
 
 			nbEntries = nbEntries + 1
@@ -625,6 +631,7 @@ UpdateBar = function()
 	local pValTtl = nil
     local isCapped = level == MAX_REPUTATION_REACTION
     local standingText = levels[level]
+	pNum = nil
 	if FactionID then
         if wowtextversion == "Retail" then
             if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
@@ -635,6 +642,7 @@ UpdateBar = function()
                 value   = value + currValue
                 minVal  = minVal + pMin
                 maxVal  = maxVal + pMax
+				pNum = pMin/threshold
                 level   = MAX_REPUTATION_REACTION + 1
                 standingText = levels[level]
                 isCapped = false
@@ -673,7 +681,11 @@ UpdateBar = function()
 		end
 		if config.textValues then
 			if not isCapped then
-				tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal)
+				if pNum ~= nil then
+					tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal) .. ' ('..pNum..')'
+				else
+					tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal)
+				end
 			end
 		end
 		if config.textToGo then
