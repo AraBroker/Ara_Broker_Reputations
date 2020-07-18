@@ -1,7 +1,16 @@
+local wowversion, wowbuild, wowdate, wowtocversion = GetBuildInfo()
+local wowtextversion 
+if gametocversion and gametocversion < 19999 then wowtextversion = "Classic" end 
+if gametocversion and gametocversion > 19999 and gametocversion < 90000 then wowtextversion = "Retail" end 
+if gametocversion and gametocversion > 90000 then 
+	wowtextversion      = "Beta"
+	AraBackdropTemplate = "BackdropTemplate"
+end 
+
 local addonName = ...
 local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH, FONT_SIZE, MAX_ENTRIES =
 	   14,          13,     10,      3,            110,             30,          11
-local f = CreateFrame("Frame", "AraReputation", UIParent,"BackdropTemplate")
+local f = CreateFrame("Frame", "AraReputation", UIParent, AraBackdropTemplate)
 local configMenu, options, ColorPickerChange, ColorPickerCancel, OpenColorPicker, SetOption, textures
 local factions, config, char, UpdateTablet, UpdateBar = {}
 local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton
@@ -990,7 +999,7 @@ function f:ADDON_LOADED(addon)
 	f:SetScript("OnLeave", Menu_OnLeave)
 	f:RegisterEvent"CHAT_MSG_COMBAT_FACTION_CHANGE"
 
-	slider = CreateFrame("Slider", nil, f, "BackdropTemplate")
+	slider = CreateFrame("Slider", nil, f, AraBackdropTemplate)
 	slider:SetWidth(16)
 	slider:SetThumbTexture"Interface\\Buttons\\UI-SliderBar-Button-Horizontal"
 	slider:SetBackdrop( {
