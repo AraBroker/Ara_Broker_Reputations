@@ -1,16 +1,14 @@
+--Version detection
 local wowversion, wowbuild, wowdate, wowtocversion = GetBuildInfo()
 local wowtextversion
 if wowtocversion and wowtocversion < 19999 then wowtextversion = "Classic" end 
 if wowtocversion and wowtocversion > 19999 and wowtocversion < 90000 then wowtextversion = "Retail" end 
-if wowtocversion and wowtocversion > 90000 then 
-	wowtextversion      = "Beta"
-	AraBackdropTemplate = "BackdropTemplate"
-end 
+if wowtocversion and wowtocversion > 90000 then wowtextversion = "Beta" end 
 
 local addonName = ...
 local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH, FONT_SIZE, MAX_ENTRIES =
 	   14,          13,     10,      3,            110,             30,          11
-local f = CreateFrame("Frame", "AraReputation", UIParent, AraBackdropTemplate)
+local f = CreateFrame("Frame", "AraReputation", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 local configMenu, options, ColorPickerChange, ColorPickerCancel, OpenColorPicker, SetOption, textures
 local factions, config, char, UpdateTablet, UpdateBar = {}
 local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton
@@ -26,6 +24,8 @@ local defaultConfig = {
 	textStanding = true,
 	textPerc = true,
 	textValues = false,
+	textParagon = true,
+	showParagonCount = true,
 	barTexture = defaultTexture,
     blizzColorsInstead = false,
     blizzColorsInsteadBroker = false,
@@ -45,11 +45,6 @@ local defaultConfig = {
 	useTipTacSkin = true,
 }
 table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
-
---Version detection, bit of a hack for now
-local wowversion, wowbuild, wowdate, wowtocversion = GetBuildInfo()
-local wowtextversion 
-if string.find(wowversion,"^1.") ~= nil then wowtextversion = "Classic" else wowtextversion = "Retail" end
 
 local defaultCharConfig = {
 	collapsedHeaders = {},
@@ -122,7 +117,8 @@ local function Menu_OnLeave(self)
 		highlight:SetAlpha(0)
 		if not config.showSeparateValues and not config.showRawInstead then
 			self.fs:SetText(levels[self.rep.level])
-            if (wowtextversion == "Retail") then
+			--For Retail and Beta, get friends
+			if not(wowtextversion == "Classic") then
                 local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(self.rep.FactionID)
                 if (friendID ~= nil) then
                     self.fs:SetText(friendTextLevel)  --self.fs:SetText(select(7,GetFriendshipReputation(tonumber(self.rep.FactionID))))           
@@ -286,8 +282,9 @@ UpdateTablet = function(self)
 		end
 		if not skip or isHeader and not (isChild and skipChild) then
             local standingText = levels[level]
-            local isCapped = level == MAX_REPUTATION_REACTION
-            if (wowtextversion == "Retail") then
+			local isCapped = level == MAX_REPUTATION_REACTION
+			--If not Classic, do Paragon config
+            if not(wowtextversion == "Classic") then
                 if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                     local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                     local pMin = currValue - (currValue % threshold)
@@ -317,7 +314,7 @@ UpdateTablet = function(self)
             if isCapped then 
                 textValue = standingText
             else
-				if pNum ~= nil then
+				if pNum ~= nil and config.showParagonCount then
 					textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) .. ' ('..pNum..')'
 				else
 					textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
@@ -357,7 +354,7 @@ UpdateTablet = function(self)
 					button.fs:SetText(button.rep.textValue)
 				else
 					button.fs:SetText( levels[level] )
-                    if (wowtextversion == "Retail") then
+                    if not(wowtextversion == "Classic") then
                     	local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(FactionID)
                     	if (friendID ~= nil) then
                     	    button.fs:SetText( friendTextLevel )
@@ -604,7 +601,7 @@ UpdateBar = function()
 
             local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
             if name then
-                if wowtextversion == "Retail" then
+                if not(wowtextversion == "Classic") then
                     if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                         local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                         pValTtl = currValue
@@ -642,7 +639,7 @@ UpdateBar = function()
     local standingText = levels[level]
 	pNum = nil
 	if FactionID then
-        if wowtextversion == "Retail" then
+        if not(wowtextversion == "Classic") then
             if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                 local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                 local pMin = currValue - (currValue % threshold)
@@ -690,7 +687,7 @@ UpdateBar = function()
 		end
 		if config.textValues then
 			if not isCapped then
-				if pNum ~= nil then
+				if pNum ~= nil and config.textParagon then
 					tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal) .. ' ('..pNum..')'
 				else
 					tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal)
@@ -791,12 +788,14 @@ function f:SetupConfigMenu()
 			{ text = "Percentage", check = "textPerc" },
 			{ text = "Raw Numbers", check = "textValues" },
 			{ text = "Reputation To Go", check = "textToGo" },
-			{ text = "Session Gain", check = "textSession" } } } } },
+			{ text = "Session Gain", check = "textSession" }, 
+			{ text = "Paragon Count", check = "textParagon" } } } } },
 	{ text = "Tooltip Columns", submenu = {
 		{ text = "Show Raw Numbers instead of Standing", check = "showRawInstead" },
 		{ text = "Show Separate Raw Numbers", check = "showSeparateValues" },
 		{ text = "Show Reputation To Go", check = "showRepToGo" },
-		{ text = "Show Session Gain", check = "showSessionGain" } } },
+		{ text = "Show Session Gain", check = "showSessionGain" },
+		{ text = "Show Paragon Count", check = "showParagonCount" } } },
 	{ text = "Bar Texture", submenu = function(self, level)
 		local sharedMedia = LibStub"LibSharedMedia-3.0"
 		for i, name in ipairs(sharedMedia and textures or {"Blizzard"}) do
@@ -999,7 +998,8 @@ function f:ADDON_LOADED(addon)
 	f:SetScript("OnLeave", Menu_OnLeave)
 	f:RegisterEvent"CHAT_MSG_COMBAT_FACTION_CHANGE"
 
-	slider = CreateFrame("Slider", nil, f, AraBackdropTemplate)
+--	slider = CreateFrame("Slider", nil, f, AraBackdropTemplate)
+	slider = CreateFrame("Slider", nil, f, BackdropTemplateMixin and "BackdropTemplate")
 	slider:SetWidth(16)
 	slider:SetThumbTexture"Interface\\Buttons\\UI-SliderBar-Button-Horizontal"
 	slider:SetBackdrop( {

@@ -1,7 +1,7 @@
 ## Interface: 90000
 
 ## Title: Ara - Broker - Reputations
-## Version: r37
+## Version: r38
 ## Author: Altelulex (updated by VikingKing)
 ## Notes: Display watched faction and a customizable tree view of faction bars.
 ## OptionalDeps:
