@@ -2,8 +2,8 @@
 local wowversion, wowbuild, wowdate, wowtocversion = GetBuildInfo()
 local wowtextversion
 if wowtocversion and wowtocversion < 19999 then wowtextversion = "Classic" end 
-if wowtocversion and wowtocversion > 19999 and wowtocversion < 90000 then wowtextversion = "Retail" end 
-if wowtocversion and wowtocversion > 90000 then wowtextversion = "Beta" end 
+if wowtocversion and wowtocversion > 19999 and wowtocversion < 100000 then wowtextversion = "Retail" end 
+if wowtocversion and wowtocversion > 100000 then wowtextversion = "Beta" end 
 
 local addonName = ...
 local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH, FONT_SIZE, MAX_ENTRIES =
