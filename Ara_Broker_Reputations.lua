@@ -152,8 +152,13 @@ local function Faction_OnClick(self, button)
 		UpdateTablet()
 	elseif button == "RightButton" then
 		if not rep.showValue then return end
-        local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(rep.FactionID)
-        if (friendID ~= nil) then
+		--For Retail and Beta, get friends
+		if not(wowtextversion == "Classic") then
+        	local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(rep.FactionID)
+		else
+			local friendID = nil
+		end
+		if (friendID ~= nil) then
 			if rep.textValue == (friendTextLevel) then
 				ChatFrame_OpenChat(rep.name.." - "..friendTextLevel, DEFAULT_CHAT_FRAME)
 			else
