@@ -1,9 +1,8 @@
 --Version detection
-local wowversion, wowbuild, wowdate, wowtocversion = GetBuildInfo()
 local wowtextversion
-if wowtocversion and wowtocversion < 19999 then wowtextversion = "Classic" end 
-if wowtocversion and wowtocversion > 19999 and wowtocversion < 100000 then wowtextversion = "Retail" end 
-if wowtocversion and wowtocversion > 100000 then wowtextversion = "Beta" end 
+if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then wowtextversion = "Classic" end 
+if WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then wowtextversion = "TBC Classic" end
+if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then wowtextversion = "Retail" end 
 
 local addonName = ...
 local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH, FONT_SIZE, MAX_ENTRIES =
@@ -118,7 +117,7 @@ local function Menu_OnLeave(self)
         if not config.showSeparateValues and not config.showRawInstead then
             self.fs:SetText(levels[self.rep.level])
             --For Retail and Beta, get friends
-            if not(wowtextversion == "Classic") then
+            if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
                 local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(self.rep.FactionID)
                 if (friendID ~= nil) then
                     self.fs:SetText(friendTextLevel)  --self.fs:SetText(select(7,GetFriendshipReputation(tonumber(self.rep.FactionID))))           
@@ -153,7 +152,7 @@ local function Faction_OnClick(self, button)
     elseif button == "RightButton" then
         if not rep.showValue then return end
         --For Retail and Beta, get friends
-        if not(wowtextversion == "Classic") then
+        if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
             local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(rep.FactionID)
         else
             local friendID = nil
@@ -289,7 +288,7 @@ UpdateTablet = function(self)
             local standingText = levels[level]
             local isCapped = level == MAX_REPUTATION_REACTION
             --If not Classic, do Paragon config
-            if not(wowtextversion == "Classic") then
+            if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
                 if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                     local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                     local pMin = currValue - (currValue % threshold)
@@ -359,7 +358,7 @@ UpdateTablet = function(self)
                     button.fs:SetText(button.rep.textValue)
                 else
                     button.fs:SetText( levels[level] )
-                    if not(wowtextversion == "Classic") then
+                    if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
                         local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(FactionID)
                         if (friendID ~= nil) then
                             button.fs:SetText( friendTextLevel )
@@ -606,7 +605,7 @@ UpdateBar = function()
 
             local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
             if name then
-                if not(wowtextversion == "Classic") then
+                if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
                     if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                         local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                         pValTtl = currValue
@@ -644,7 +643,7 @@ UpdateBar = function()
     local standingText = levels[level]
     pNum = nil
     if FactionID then
-        if not(wowtextversion == "Classic") then
+        if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
             if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                 local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                 local pMin = currValue - (currValue % threshold)
