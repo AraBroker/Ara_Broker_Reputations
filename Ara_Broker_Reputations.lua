@@ -43,6 +43,10 @@ local defaultConfig = {
     },
     useTipTacSkin = true,
 }
+local levelshift = {
+	[2472] = 3,
+	[2464] = 3,
+}
 table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
 
 local defaultCharConfig = {
@@ -310,7 +314,9 @@ UpdateTablet = function(self)
                     standingText = friendTextLevel
                     if ( nextFriendThreshold ) then
                         minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
-                    else
+                    elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
+						isCapped = false
+					else
                         isCapped = true
                     end
                 end
@@ -348,9 +354,11 @@ UpdateTablet = function(self)
 
             if showValue then
                 local perc = 0
+				local colorshift = 0
                 if isCapped then perc = 1 else perc = (value - minVal) / (maxVal - minVal) end
                 if level > 9 then level = 9 end
-                local color = config.blizzColorsInstead and config.blizzardColors[level] or config.asciiColors[level]
+				if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+                local color = config.blizzColorsInstead and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
                 button.bar:SetVertexColor( color.r, color.g, color.b )
                 button.bar:SetWidth( SIMPLE_BAR_WIDTH * (perc == 0 and 0.0001 or perc) )
                 button.bar:SetTexture(config.barTexture)
@@ -664,6 +672,8 @@ UpdateBar = function()
                 standingText = friendTextLevel
                 if ( nextFriendThreshold ) then
                     minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
+				elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
+					isCapped = false
                 else
                     isCapped = true
                 end
@@ -681,7 +691,9 @@ UpdateBar = function()
     if config.blockDisplay == "text" then
         wipe(tt)
         if level > 9 then level = 9 end
-        local asciiColor = config.blizzColorsInsteadBroker and config.blizzardColors[level] or config.asciiColors[level]
+		local colorshift = 0
+		if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+        local asciiColor = config.blizzColorsInsteadBroker and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
         asciiColor = ("|cff%.2x%.2x%.2x"):format(asciiColor.r*255, asciiColor.g*255, asciiColor.b*255)
         if config.textStanding then
             tt[#tt+1] = (#tt>0 and "" or asciiColor)..standingText.."|r"
@@ -717,10 +729,12 @@ UpdateBar = function()
             tt[#tt+1] = ("%sSession %s%i|r"):format(#tt>0 and "" or asciiColor, gain >= 0 and "+" or "", gain)
         end
         if config.textFaction then
+			local colorshift = 0
+			if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
             local color = defaultColor
             if config.textFactionColor == "none"     then color = defaultColor end
-            if config.textFactionColor == "ascii"    then color = config.asciiColors[level] end 
-            if config.textFactionColor == "blizzard" then color = config.blizzardColors[level] end
+            if config.textFactionColor == "ascii"    then color = config.asciiColors[level+colorshift] end 
+            if config.textFactionColor == "blizzard" then color = config.blizzardColors[level+colorshift] end
             tinsert(tt,1, ("|cff%.2x%.2x%.2x%s|r"):format(color.r*255, color.g*255, color.b*255, name) )
         end
         block.text = table.concat(tt, " - ")
@@ -846,6 +860,7 @@ function f:SetupConfigMenu()
         { text = "Custom...", radio="scaleX", func=function() StaticPopup_Show"SET_ABR_SCALE" end } } },
     { text = "Auto switch on reputation gain", check = "autoSwitch", submenu = {
         { text = "Except for guild reputation", check = "exceptGuild" } } },
+    { text = "Apply Color Shift for special Factions", check = "applyColorShift" }, 
     { text = "Sort by Reputation Level", check = "sortByRep" }, 
     { text = "Use TipTac skin (requires TipTac)", check = "useTipTacSkin" },
     { text = "Show Hints", check = "showHints" },

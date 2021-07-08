@@ -1,4 +1,4 @@
-## Interface: 90100
+## Interface: 11307
 
 ## Title: Ara - Broker - Reputations
 ## Version: r45
