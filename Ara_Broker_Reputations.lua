@@ -44,8 +44,21 @@ local defaultConfig = {
     useTipTacSkin = true,
 }
 local levelshift = {
-	[2472] = 3,
-	[2464] = 3,
+	[2472] = 2,  -- The Archivists' Codex
+	[2464] = 3,  -- Court of Night
+	[2432] = 2,  -- Ve'nari
+	[2135] = 1,  -- Chromie
+	[1358] = 2,  -- Anglers / Nat Pagle
+	[1273] = 2,  -- Tillers / Jogu the Drunk
+	[1275] = 2,  -- Tillers / Ella
+	[1276] = 2,  -- Tillers / Old Hillpaw
+	[1277] = 2,  -- Tillers / Chee Chee
+	[1278] = 2,  -- Tillers / Sho
+	[1279] = 2,  -- Tillers / Haohan Mudclaw
+	[1280] = 2,  -- Tillers / Tina Mudclaw
+	[1281] = 2,  -- Tillers / Gina Mudclaw
+	[1282] = 2,  -- Tillers / Fish Fellreed
+	[1283] = 2,  -- Tillers / Farmer Fung
 }
 table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
 
@@ -358,6 +371,7 @@ UpdateTablet = function(self)
                 if isCapped then perc = 1 else perc = (value - minVal) / (maxVal - minVal) end
                 if level > 9 then level = 9 end
 				if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+                if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
                 local color = config.blizzColorsInstead and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
                 button.bar:SetVertexColor( color.r, color.g, color.b )
                 button.bar:SetWidth( SIMPLE_BAR_WIDTH * (perc == 0 and 0.0001 or perc) )
@@ -693,6 +707,7 @@ UpdateBar = function()
         if level > 9 then level = 9 end
 		local colorshift = 0
 		if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+        if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
         local asciiColor = config.blizzColorsInsteadBroker and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
         asciiColor = ("|cff%.2x%.2x%.2x"):format(asciiColor.r*255, asciiColor.g*255, asciiColor.b*255)
         if config.textStanding then
@@ -731,6 +746,7 @@ UpdateBar = function()
         if config.textFaction then
 			local colorshift = 0
 			if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+            if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
             local color = defaultColor
             if config.textFactionColor == "none"     then color = defaultColor end
             if config.textFactionColor == "ascii"    then color = config.asciiColors[level+colorshift] end 
