@@ -1,4 +1,4 @@
---Version detection
+--Version detection 
 local wowtextversion
 if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then wowtextversion = "Classic" end 
 if WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then wowtextversion = "TBC Classic" end
