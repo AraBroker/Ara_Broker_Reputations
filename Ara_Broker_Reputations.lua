@@ -45,6 +45,7 @@ local defaultConfig = {
 }
 local levelshift = {
 	[2472] = 2,  -- The Archivists' Codex
+	[2462] = 3,  -- Stitchmasters
 	[2464] = 3,  -- Court of Night
 	[2432] = 2,  -- Ve'nari
 	[2135] = 1,  -- Chromie
