@@ -137,12 +137,14 @@ local function Menu_OnLeave(self)
             self.fs:SetText(levels[self.rep.level])
             --For Retail and Beta, get friends
             if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
-				local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
-				local friendID   = friendInfo.friendshipFactionID
-				if (friendID ~= nil and friendID ~= 0) then
-					local friendTextLevel = friendInfo.reaction
-					self.fs:SetText( friendTextLevel ) --self.fs:SetText(select(7,GetFriendshipReputation(tonumber(self.rep.FactionID))))           
-				end				
+				if (self.rep.FactionID ~= nil and self.rep.FactionID ~= 0) then
+					local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
+					local friendID   = friendInfo.friendshipFactionID
+					if (friendID ~= nil and friendID ~= 0) then
+						local friendTextLevel = friendInfo.reaction
+						self.fs:SetText( friendTextLevel ) --self.fs:SetText(select(7,GetFriendshipReputation(tonumber(self.rep.FactionID))))           
+					end
+				end
             end
         end
         CallModule("OnLeaveFaction", self)
@@ -174,8 +176,10 @@ local function Faction_OnClick(self, button)
         if not rep.showValue then return end
         --For Retail and Beta, get friends
         if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
-			local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
-			local friendID   = friendInfo.friendshipFactionID
+			if (self.rep.FactionID ~= nil and self.rep.FactionID ~= 0) then
+				local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
+				local friendID   = friendInfo.friendshipFactionID
+			end
         else
             local friendID = nil
         end
@@ -300,7 +304,6 @@ UpdateTablet = function(self)
 
     for i = 1, GetNumFactions() do
         local pValTtl = nil
-		--local name, description, standingId, bottomValue, topValue, earnedValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionID = GetFactionInfo(factionIndex)		
         local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
         pNum = nil
         if name then
@@ -328,28 +331,29 @@ UpdateTablet = function(self)
                     textValue = ("%i / %i"):format(value-minVal, maxVal-minVal)
                 end
                 -- check if this is a friendship faction 
-                --local friendID, friendRep, friendMaxRep, friendName, friendText, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = C_GossipInfo.GetFriendshipReputation(FactionID)
-				local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
-				local friendID = friendInfo.friendshipFactionID
-				if (friendID ~= nil and friendID ~= 0) then
-					local friendRep = friendInfo.standing
-					local friendMaxRep = friendInfo.maxRep
-					local friendName = friendInfo.name
-					local friendText = friendInfo.text
-					local friendTexture = friendInfo.texture
-					local friendTextLevel = friendInfo.reaction
-					local friendThreshold = friendInfo.reactionThreshold
-					local nextFriendThreshold = friendInfo.nextThreshold
-					name = friendName
-                    standingText = friendTextLevel
-                    if ( nextFriendThreshold ) then
-                        minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
-                    elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
-						isCapped = false
-					else
-                        isCapped = true
-                    end
-                end
+				if (FactionID ~= nil and FactionID ~= 0) then
+					local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+					local friendID = friendInfo.friendshipFactionID
+					if (friendID ~= nil and friendID ~= 0) then
+						local friendRep = friendInfo.standing
+						local friendMaxRep = friendInfo.maxRep
+						local friendName = friendInfo.name
+						local friendText = friendInfo.text
+						local friendTexture = friendInfo.texture
+						local friendTextLevel = friendInfo.reaction
+						local friendThreshold = friendInfo.reactionThreshold
+						local nextFriendThreshold = friendInfo.nextThreshold
+						name = friendName
+						standingText = friendTextLevel
+						if ( nextFriendThreshold ) then
+							minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
+						elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
+							isCapped = false
+						else
+							isCapped = true
+						end
+					end
+				end
             end
             if isCapped then 
                 textValue = standingText
@@ -405,11 +409,13 @@ UpdateTablet = function(self)
                 else
                     button.fs:SetText( levels[level] )
                     if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
-						local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
-						local friendID   = friendInfo.friendshipFactionID
-						if (friendID ~= nil and friendID ~= 0) then
-							local friendTextLevel = friendInfo.reaction
-							button.fs:SetText( friendTextLevel )
+						if (FactionID ~= nil and FactionID ~= 0) then
+							local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+							local friendID   = friendInfo.friendshipFactionID
+							if (friendID ~= nil and friendID ~= 0) then
+								local friendTextLevel = friendInfo.reaction
+								button.fs:SetText( friendTextLevel )
+							end
                         end
                     end
                 end
@@ -503,20 +509,20 @@ UpdateTablet = function(self)
                 if a.rep.textValue == levels[8] then 
                     --Exalted Rep
                     repSortByName = true
-                elseif a.rep.textValue == (select(7,C_GossipInfo.GetFriendshipReputation(tonumber(a.rep.FactionID)))) then
+                --elseif a.rep.textValue == (select(7,C_GossipInfo.GetFriendshipReputation(tonumber(a.rep.FactionID)))) then
                     --Needs fixed for Dragonflight
 					--Best Friend Rep
-                    repSortByName = true
+                    --repSortByName = true
                 else
                     aRep = string.gsub(a.rep.textValue, "/.+", "")
                 end
                 if b.rep.textValue == levels[8] then
                     --Exalted Rep
                     repSortByName = true
-                elseif b.rep.textValue == (select(7,C_GossipInfo.GetFriendshipReputation(tonumber(b.rep.FactionID)))) then
+                --elseif b.rep.textValue == (select(7,C_GossipInfo.GetFriendshipReputation(tonumber(b.rep.FactionID)))) then
                     --Needs fixed for Dragonflight
                     --Best Friend Rep
-                    repSortByName = true
+                    --repSortByName = true
                 else
                     bRep = string.gsub(b.rep.textValue, "/.+", "")
                 end
@@ -666,17 +672,19 @@ UpdateBar = function()
 						-- this seems to indicate a bug in the rep where GetFactionInfo is not returning proper values, because minVal should
 						-- only be equal to maxVal when reputation is capped.  Seems to only be happening on Bodyguards from WoD rep
 						-- thus, using Value from GetFactionInfo here results in an invalid SessionGain number
-						local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
-						local friendID = friendInfo.friendshipFactionID
-						if (friendID ~= nil and friendID ~= 0) then
-							local nextFriendThreshold = friendInfo.nextThreshold
-							if ( nextFriendThreshold ) then
-								if not isHeader or hasRep then startingRep[name] = friendInfo.standing end
+						if (FactionID ~= nil and FactionID ~= 0) then
+							local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+							local friendID = friendInfo.friendshipFactionID
+							if (friendID ~= nil and friendID ~= 0) then
+								local nextFriendThreshold = friendInfo.nextThreshold
+								if ( nextFriendThreshold ) then
+									if not isHeader or hasRep then startingRep[name] = friendInfo.standing end
+								else
+									if not isHeader or hasRep then startingRep[name] = value end
+								end
 							else
 								if not isHeader or hasRep then startingRep[name] = value end
 							end
-						else
-							if not isHeader or hasRep then startingRep[name] = value end
 						end
                     end
                 else
@@ -724,27 +732,29 @@ UpdateBar = function()
                 isCapped = false
             end
             -- check if this is a friendship faction 
-			local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
-			local friendID = friendInfo.friendshipFactionID
-            if (friendID ~= nil and friendID ~= 0) then
-				local friendRep = friendInfo.standing
-				local friendMaxRep = friendInfo.maxRep
-				local friendName = friendInfo.name
-				local friendText = friendInfo.text
-				local friendTexture = friendInfo.texture
-				local friendTextLevel = friendInfo.reaction
-				local friendThreshold = friendInfo.reactionThreshold
-				local nextFriendThreshold = friendInfo.nextThreshold
-				name = friendName
-                standingText = friendTextLevel
-                if ( nextFriendThreshold ) then
-                    minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
-				elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
-					isCapped = false
-                else
-                    isCapped = true
-                end
-            end
+			if (FactionID ~= nil and FactionID ~= 0) then
+				local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+				local friendID = friendInfo.friendshipFactionID
+				if (friendID ~= nil and friendID ~= 0) then
+					local friendRep = friendInfo.standing
+					local friendMaxRep = friendInfo.maxRep
+					local friendName = friendInfo.name
+					local friendText = friendInfo.text
+					local friendTexture = friendInfo.texture
+					local friendTextLevel = friendInfo.reaction
+					local friendThreshold = friendInfo.reactionThreshold
+					local nextFriendThreshold = friendInfo.nextThreshold
+					name = friendName
+					standingText = friendTextLevel
+					if ( nextFriendThreshold ) then
+						minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
+					elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
+						isCapped = false
+					else
+						isCapped = true
+					end
+				end
+			end
         else
             --not sure this is needed here
             --isCapped = true
