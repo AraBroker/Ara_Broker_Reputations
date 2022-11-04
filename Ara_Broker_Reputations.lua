@@ -611,9 +611,9 @@ local function SetSkin()
             return tiptacGradient and tiptacGradient:Hide()
         elseif not tiptacGradient then
             tiptacGradient = f:CreateTexture()
-            tiptacGradient:SetTexture(1,1,1,1)
+            tiptacGradient:SetTexture([[Interface\AddOns\Ara_Broker_Reputations\media\gradient]])
         end
-        tiptacGradient:SetGradientAlpha("VERTICAL",0,0,0,0,unpack(cfg.gradientColor))
+        tiptacGradient:SetVertexColor(unpack(cfg.gradientColor))
         tiptacGradient:SetPoint("TOPLEFT",cfg.backdropInsets,-cfg.backdropInsets)
         tiptacGradient:SetPoint("BOTTOMRIGHT",f,"TOPRIGHT",-cfg.backdropInsets,-36)
         tiptacGradient:Show()
