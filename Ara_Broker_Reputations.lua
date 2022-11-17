@@ -44,23 +44,25 @@ local defaultConfig = {
     },
     useTipTacSkin = true,
 }
+--Looks like Blizzard fixed most of the level shift issues.  The only one I've seen
+--so far that still needs it is the Chromie friendship rep.
 local levelshift = {
-	[2472] = 2,  -- The Archivists' Codex
-	[2462] = 3,  -- Stitchmasters
-	[2464] = 3,  -- Court of Night
-	[2432] = 2,  -- Ve'nari
-	[2135] = 1,  -- Chromie
-	[1358] = 2,  -- Anglers / Nat Pagle
-	[1273] = 2,  -- Tillers / Jogu the Drunk
-	[1275] = 2,  -- Tillers / Ella
-	[1276] = 2,  -- Tillers / Old Hillpaw
-	[1277] = 2,  -- Tillers / Chee Chee
-	[1278] = 2,  -- Tillers / Sho
-	[1279] = 2,  -- Tillers / Haohan Mudclaw
-	[1280] = 2,  -- Tillers / Tina Mudclaw
-	[1281] = 2,  -- Tillers / Gina Mudclaw
-	[1282] = 2,  -- Tillers / Fish Fellreed
-	[1283] = 2,  -- Tillers / Farmer Fung
+	--[2472] = 2,  -- The Archivists' Codex
+	--[2462] = 3,  -- Stitchmasters
+	--[2464] = 3,  -- Court of Night
+	--[2432] = 2,  -- Ve'nari
+	[2135] = 2,  -- Chromie
+	--[1358] = 2,  -- Anglers / Nat Pagle
+	--[1273] = 2,  -- Tillers / Jogu the Drunk
+	--[1275] = 2,  -- Tillers / Ella
+	--[1276] = 2,  -- Tillers / Old Hillpaw
+	--[1277] = 2,  -- Tillers / Chee Chee
+	--[1278] = 2,  -- Tillers / Sho
+	--[1279] = 2,  -- Tillers / Haohan Mudclaw
+	--[1280] = 2,  -- Tillers / Tina Mudclaw
+	--[1281] = 2,  -- Tillers / Gina Mudclaw
+	--[1282] = 2,  -- Tillers / Fish Fellreed
+	--[1283] = 2,  -- Tillers / Farmer Fung
 }
 table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
 
