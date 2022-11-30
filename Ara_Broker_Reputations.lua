@@ -139,6 +139,13 @@ local function Menu_OnLeave(self)
             self.fs:SetText(levels[self.rep.level])
             --For Retail and Beta, get friends
             if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+				if (self.rep.FactionID ~= nil and C_Reputation.IsMajorFaction(self.rep.FactionID)) then
+					local renownInfo = C_MajorFactions.GetMajorFactionData(self.rep.FactionID)
+					if (renownInfo ~= nil) then
+						local renownLevel = renownInfo.renownLevel
+						self.fs:SetText( "Renown " .. renownLevel )
+					end
+				end
 				if (self.rep.FactionID ~= nil and self.rep.FactionID ~= 0) then
 					local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
 					local friendID   = friendInfo.friendshipFactionID
@@ -307,7 +314,7 @@ UpdateTablet = function(self)
     for i = 1, GetNumFactions() do
         local pValTtl = nil
         local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
-        pNum = nil
+		pNum = nil
         if name then
         if isHeader and not (isChild and skipChild) then
             skip = char.collapsedHeaders[name]
@@ -318,7 +325,25 @@ UpdateTablet = function(self)
             local isCapped = level == MAX_REPUTATION_REACTION
             --If not Classic, do Paragon config
             if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
-                if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
+                -- check to see if this is a renown faction
+				if (FactionID and C_Reputation.IsMajorFaction(FactionID)) then
+					local renownInfo = C_MajorFactions.GetMajorFactionData(FactionID)
+					if (renownInfo ~= nil) then
+						local renownRep = renownInfo.renownReputationEarned
+						local nextRenownThreshold = renownInfo.renownLevelThreshold
+						local renownLevel = renownInfo.renownLevel
+						standingText = "Renown " .. renownLevel
+						if ( nextRenownThreshold ) then
+							--pValTtl = renownRep
+							minVal, maxVal, value = 0, nextRenownThreshold, renownRep
+							textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+							isCapped = false
+						else
+							isCapped = true
+						end
+					end
+				end
+				if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                     local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                     local pMin = currValue - (currValue % threshold)
                     local pMax = pMin + threshold
@@ -409,17 +434,17 @@ UpdateTablet = function(self)
                 if config.showRawInstead and not config.showSeparateValues then
                     button.fs:SetText(button.rep.textValue)
                 else
-                    button.fs:SetText( levels[level] )
-                    if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
-						if (FactionID ~= nil and FactionID ~= 0) then
-							local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
-							local friendID   = friendInfo.friendshipFactionID
-							if (friendID ~= nil and friendID ~= 0) then
-								local friendTextLevel = friendInfo.reaction
-								button.fs:SetText( friendTextLevel )
-							end
-                        end
-                    end
+                    button.fs:SetText( standingText ) -- this was levels[level], but that breaks standingText changes
+                    --if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+					--	if (FactionID ~= nil and FactionID ~= 0) then
+					--		local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+					--		local friendID   = friendInfo.friendshipFactionID
+					--		if (friendID ~= nil and friendID ~= 0) then
+					--			local friendTextLevel = friendInfo.reaction
+					--			button.fs:SetText( friendTextLevel )
+					--		end
+                    --  end
+                    --end
                 end
                 button.bar:Show() button.fs:Show()
                 if config.showSeparateValues then button.values:SetText(button.rep.textValue) end
@@ -669,12 +694,23 @@ UpdateBar = function()
                         pValTtl = currValue
                         if not isHeader or hasRep then startingRep[name] = pValTtl end
                     else
-						-- need to fix this for friendships for DF - particularly broken on Bodyguards
-						-- need to solve for condition where GetFactionInfo minVal and maxVal are eq, but friendInfo.nextThreshold is not NULL
-						-- this seems to indicate a bug in the rep where GetFactionInfo is not returning proper values, because minVal should
-						-- only be equal to maxVal when reputation is capped.  Seems to only be happening on Bodyguards from WoD rep
-						-- thus, using Value from GetFactionInfo here results in an invalid SessionGain number
-						if (FactionID ~= nil and FactionID ~= 0) then
+						if (FactionID and C_Reputation.IsMajorFaction(FactionID)) then
+							local renownInfo = C_MajorFactions.GetMajorFactionData(FactionID)
+							if (renownInfo ~= nil) then
+								local nextRenownThreshold = renownInfo.renownLevelThreshold
+								if ( nextRenownThreshold ) then
+									if not isHeader or hasRep then startingRep[name] = renownInfo.renownReputationEarned end
+								else
+									if not isHeader or hasRep then startingRep[name] = value end
+								end
+							else
+								if not isHeader or hasRep then startingRep[name] = value end
+							end
+						elseif (FactionID and C_GossipInfo.GetFriendshipReputation(FactionID)) then
+							-- this code is to solve for condition where GetFactionInfo minVal and maxVal are eq, but friendInfo.nextThreshold is not NULL
+							-- this seems to indicate a bug in the rep where GetFactionInfo is not returning proper values, because minVal should
+							-- only be equal to maxVal when reputation is capped.  Seems to only be happening on Bodyguards from WoD rep
+							-- thus, using Value from GetFactionInfo here results in an invalid SessionGain number
 							local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
 							local friendID = friendInfo.friendshipFactionID
 							if (friendID ~= nil and friendID ~= 0) then
@@ -720,6 +756,23 @@ UpdateBar = function()
     pNum = nil
     if FactionID then
         if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+			if (FactionID and C_Reputation.IsMajorFaction(FactionID)) then
+				local renownInfo = C_MajorFactions.GetMajorFactionData(FactionID)
+				if (renownInfo ~= nil) then
+					local renownRep = renownInfo.renownReputationEarned
+					local nextRenownThreshold = renownInfo.renownLevelThreshold
+					local renownLevel = renownInfo.renownLevel
+					standingText = "Renown " .. renownLevel
+					if ( nextRenownThreshold ) then
+						--pValTtl = renownRep
+						minVal, maxVal, value = 0, nextRenownThreshold, renownRep
+						textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+						isCapped = false
+					else
+						isCapped = true
+					end
+				end
+			end
             if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
                 local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
                 local pMin = currValue - (currValue % threshold)
@@ -803,7 +856,7 @@ UpdateBar = function()
         end
         if config.textSession then
             local gain = 0
-            if pValTtl then
+			if pValTtl then
                 if not startingRep[name] then startingRep[name] = pValTtl end
                 gain = pValTtl - startingRep[name]
             else
