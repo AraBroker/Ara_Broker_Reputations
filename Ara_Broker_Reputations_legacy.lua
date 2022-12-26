@@ -11,7 +11,7 @@ local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH
 local f = CreateFrame("Frame", "AraReputation", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 local configMenu, options, ColorPickerChange, ColorPickerCancel, OpenColorPicker, SetOption, textures
 local factions, config, char, UpdateTablet, UpdateBar = {}
-local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFaction
+local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton
 local sliderValue, hasSlider, c, nbEntries = 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
@@ -32,35 +32,39 @@ local defaultConfig = {
     blizzColorsDefault = false,
     blizzardColors = FACTION_BAR_COLORS,  --hack to add back Blizzard colors
     asciiColors = {
-        [1]  = { r= .54, g= 0,   b= 0   }, -- hated
-        [2]  = { r= 1,   g= .10, b= .1  }, -- hostile
-        [3]  = { r= 1,   g= .55, b= 0   }, -- unfriendly
-        [4]  = { r= .87, g= .87, b= .87 }, -- neutral
-        [5]  = { r= 1,   g= 1,   b= 0   }, -- friendly
-        [6]  = { r= .1,  g= .9,  b= .1  }, -- honored
-        [7]  = { r= .25, g= .41, b= .88 }, -- revered
-        [8]  = { r= .6,  g= .2,  b= .8  }, -- exalted
-        ["paragon"]  = { r= .4,  g= 0,   b= .6  }, -- paragon
-        ["renown"]   = { r= 0,   g= .75, b= .94 }, -- renown
+        { r= .54, g= 0,   b= 0   }, -- hated
+        { r= 1,   g= .10, b= .1  }, -- hostile
+        { r= 1,   g= .55, b= 0   }, -- unfriendly
+        { r= .87, g= .87, b= .87 }, -- neutral
+        { r= 1,   g= 1,   b= 0   }, -- friendly
+        { r= .1,  g= .9,  b= .1  }, -- honored
+        { r= .25, g= .41, b= .88 }, -- revered
+        { r= .6,  g= .2,  b= .8  }, -- exalted
+        { r= .4,  g= 0,   b= .6  }, -- past exalted
     },
     useTipTacSkin = true,
 }
 --Looks like Blizzard fixed most of the level shift issues.  The only one I've seen
 --so far that still needs it is the Chromie friendship rep.
 local levelshift = {
+	--[2472] = 2,  -- The Archivists' Codex
+	--[2462] = 3,  -- Stitchmasters
+	--[2464] = 3,  -- Court of Night
+	--[2432] = 2,  -- Ve'nari
 	[2135] = 2,  -- Chromie
+	--[1358] = 2,  -- Anglers / Nat Pagle
+	--[1273] = 2,  -- Tillers / Jogu the Drunk
+	--[1275] = 2,  -- Tillers / Ella
+	--[1276] = 2,  -- Tillers / Old Hillpaw
+	--[1277] = 2,  -- Tillers / Chee Chee
+	--[1278] = 2,  -- Tillers / Sho
+	--[1279] = 2,  -- Tillers / Haohan Mudclaw
+	--[1280] = 2,  -- Tillers / Tina Mudclaw
+	--[1281] = 2,  -- Tillers / Gina Mudclaw
+	--[1282] = 2,  -- Tillers / Fish Fellreed
+	--[1283] = 2,  -- Tillers / Farmer Fung
 }
-defaultConfig["blizzardColors"]["paragon"] = { r= 0,  g= .6,   b= .1  }
-defaultConfig["blizzardColors"]["renown"]  = { r= 0,  g= .75,  b= .94 }
-
-local IsMajorFaction = C_Reputation.IsMajorFaction or nop
-local GetMajorFactionData = C_MajorFactions and C_MajorFactions.GetMajorFactionData and C_MajorFactions.GetMajorFactionData or nop
-local HasMaximumRenown = C_MajorFactions and C_MajorFactions.HasMaximumRenown and C_MajorFactions.HasMaximumRenown or nop
-local GetCurrentRenownLevel = C_MajorFactions and C_MajorFactions.GetCurrentRenownLevel or nop
-
-local sessionStart = {}
-local sessionStartMajorFaction = {}
-local lastReps = {}
+table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
 
 local defaultCharConfig = {
     collapsedHeaders = {},
@@ -73,20 +77,10 @@ local backdrop = { bgFile="Interface\\Buttons\\WHITE8X8", edgeFile="Interface\\T
 local GetFactionInfo, FACTION_INACTIVE, GUILD, OTHER =
     GetFactionInfo, FACTION_INACTIVE, GUILD, OTHER
 
+--local Friends = {1273, 1275, 1276, 1277, 1278, 1279, 1280, 1281, 1282, 1283, 1358, 1733, 1736, 1737, 1738, 1739, 1740, 1741, 1975, 2135}
+
 local levels = {} for i=1,8 do levels[i]=_G["FACTION_STANDING_LABEL"..i] end
 table.insert(levels,"Paragon") -- Insert Paragon description into table
-table.insert(levels,"Renown")  -- Insert Renown description into table
-
-local SEX = UnitSex("player")
-local function GetFactionLabel(standingId)
-	if standingId == "paragon" then
-		return "Paragon"
-	end
-	if (standingId == "renown") then
-		return "Renown"
-	end
-	return GetText("FACTION_STANDING_LABEL" .. standingId, SEX)
-end
 
 local colors = { "8b0000", "ff1919", "ff8c00", "dddddd", "ffff00", "19e619", "4169e1", "9932cc", "67009a" }
 local nameColors = { "ff1919", "ff1919", "ffff00", "19ff19", "19ff19", "19ff19", "19ff19", "19ff19" }
@@ -142,7 +136,25 @@ local function Menu_OnLeave(self)
         self.hovered = nil
         highlight:SetAlpha(0)
         if not config.showSeparateValues and not config.showRawInstead then
-            self.fs:SetText(self.rep.standingText)
+            self.fs:SetText(levels[self.rep.level])
+            --For Retail and Beta, get friends
+            if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+				if (self.rep.FactionID ~= nil and C_Reputation.IsMajorFaction(self.rep.FactionID)) then
+					local renownInfo = C_MajorFactions.GetMajorFactionData(self.rep.FactionID)
+					if (renownInfo ~= nil) then
+						local renownLevel = renownInfo.renownLevel
+						self.fs:SetText( "Renown " .. renownLevel )
+					end
+				end
+				if (self.rep.FactionID ~= nil and self.rep.FactionID ~= 0) then
+					local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
+					local friendID   = friendInfo.friendshipFactionID
+					if (friendID ~= nil and friendID ~= 0) then
+						local friendTextLevel = friendInfo.reaction
+						self.fs:SetText( friendTextLevel ) --self.fs:SetText(select(7,GetFriendshipReputation(tonumber(self.rep.FactionID))))           
+					end
+				end
+            end
         end
         CallModule("OnLeaveFaction", self)
     end
@@ -159,6 +171,7 @@ function SetWatchedFactionIndex(...)
     UpdateBar()
 end
 
+
 local function Faction_OnClick(self, button)
     local rep = self.rep
     if rep.header and not IsControlKeyDown() then
@@ -170,12 +183,29 @@ local function Faction_OnClick(self, button)
         UpdateTablet()
     elseif button == "RightButton" then
         if not rep.showValue then return end
-		-- Check for IsMaxed here
-		if rep.textValue == levels[8] then
-			ChatFrame_OpenChat(rep.name.." - "..self.rep.standingText, DEFAULT_CHAT_FRAME)
-		else
-			ChatFrame_OpenChat(rep.name.." - "..self.rep.standingText.." - "..rep.textValue, DEFAULT_CHAT_FRAME)
-		end
+        --For Retail and Beta, get friends
+        if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+			if (self.rep.FactionID ~= nil and self.rep.FactionID ~= 0) then
+				local friendInfo = C_GossipInfo.GetFriendshipReputation(self.rep.FactionID)
+				local friendID   = friendInfo.friendshipFactionID
+			end
+        else
+            local friendID = nil
+        end
+		if (friendID ~= nil and friendID ~= 0) then
+			local friendTextLevel = friendInfo.reaction
+            if rep.textValue == (friendTextLevel) then
+                ChatFrame_OpenChat(rep.name.." - "..friendTextLevel, DEFAULT_CHAT_FRAME)
+            else
+                ChatFrame_OpenChat(rep.name.." - "..friendTextLevel.." - "..rep.textValue, DEFAULT_CHAT_FRAME)
+            end
+        else
+            if rep.textValue == levels[8] then
+                ChatFrame_OpenChat(rep.name.." - "..levels[rep.level], DEFAULT_CHAT_FRAME)
+            else
+                ChatFrame_OpenChat(rep.name.." - "..levels[rep.level].." - "..rep.textValue, DEFAULT_CHAT_FRAME)
+            end
+        end
     else
         SetWatchedFactionIndex( GetWatchedFactionInfo() == rep.name and 0 or rep.index)
         if focusedButton and focusedButton.rep.name then focusedButton.faction:SetText( (rep.header and "|cffffffff" or "|cffffd100")..focusedButton.rep.name ) end
@@ -265,148 +295,6 @@ local function AddHint(hint)
     button.icon:SetPoint("LEFT", button, "LEFT", -ICON_SIZE-TEXT_OFFSET, 0)
 end
 
-local GetFriendshipReputation = GetFriendshipReputation
-if not GetFriendshipReputation and C_GossipInfo and C_GossipInfo.GetFriendshipReputation then
-    GetFriendshipReputation = function(factionId)
-        local info = C_GossipInfo.GetFriendshipReputation(factionId)
-        if not info or not info.friendshipFactionID or info.friendshipFactionID == 0 then
-            return
-        end
-        local texture = info.texture
-        if (texture == 0) then
-            texture = nil
-        end
-        --     friendID,                 friendRep,     _, _, friendText, texture, friendTextLevel, friendThreshold,     nextFriendThreshold
-        return info.friendshipFactionID, info.standing, nil, nil, info.text, texture, info.reaction, info.reactionThreshold, info.nextThreshold
-    end
-end
-GetFriendshipReputation = GetFriendshipReputation or nop
-
-local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
-	if (not sessionStartMajorFaction[factionId]) then
-		local data = GetMajorFactionData(factionId)
-		sessionStartMajorFaction[factionId] = {
-			startLvl = data.renownLevel,
-			[data.renownLevel] = { start = 0, max = data.renownLevelThreshold }
-		}
-	end
-	local balance = 0
-	local start = sessionStartMajorFaction[factionId].startLvl
-	for i = start, currentLvl do
-		local data = sessionStartMajorFaction[factionId][i]
-		-- we might not have data yet if we just leveled and UPDATE_FACTION run before MAJOR_FACTION_RENOWN_LEVEL_CHANGED
-		if (data) then
-			local endXp = (currentLvl == i) and currentXp or data.max
-			balance = balance + (endXp - data.start)
-		end
-	end
-	return balance
-end
-
--- @return current, maximun, color, standingText, hasRewardPending, session, texture
-local function GetFactionValues(standingId, barValue, bottomValue, topValue, factionId, colors)
-	local session
-	-- Would really like a better way of handling this for inactive factions
-	if factionId ~= nil then
-		if (IsMajorFaction(factionId)) then
-			local data = GetMajorFactionData(factionId)
-			local isCapped = HasMaximumRenown(factionId)
-			local current = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
-			local standingText = (RENOWN_LEVEL_LABEL .. data.renownLevel)
-			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(data.textureKit)
-			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
-            return current, data.renownLevelThreshold, colors.renown, standingText, nil, session, texture            
-		end
-
-		if (standingId == nil) then
-			return "0", "0", "|cFFFF0000", "??? - " .. (factionId .. "?")
-		end
-
-		if (C_Reputation.IsFactionParagon(factionId)) then
-			-- local color = colors[9]
-            local color = colors.paragon
-			local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
-			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
-			local standingText = ""
-			if config.showParagonCount then
-				standingText = GetFactionLabel("paragon") .. " " .. paragonLevel+1
-			else 
-				standingText = GetFactionLabel("paragon") 
-			end
-			if hasRewardPending then
-				standingText = GetFactionLabel("paragon") .. " |A:ParagonReputation_Bag:0:0|a" 
-			end
-			sessionStart[factionId] = sessionStart[factionId] or barValue
-			session = currentValue - sessionStart[factionId]
-			--Debugging
-			--print("ParaSession:",session,currentValue,threshold,barValue,sessionStart[factionId])
-			return mod(currentValue, threshold), threshold, color, standingText, hasRewardPending, session
-		end
-
-		local friendID, friendRep, _, _, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(factionId)
-		if (friendID) then
-			local standingText = friendTextLevel
-			local color = colors[standingId] or colors[5]
-			local maximun, current = 1, 1
-			if (nextFriendThreshold) then
-				maximun, current = nextFriendThreshold - friendThreshold, friendRep - friendThreshold
-			end
-			sessionStart[factionId] = sessionStart[factionId] or friendRep
-			session = friendRep - sessionStart[factionId]
-			return current, maximun, color, standingText, nil, session, friendTexture
-		end
-
-		sessionStart[factionId] = sessionStart[factionId] or barValue
-		session = barValue - sessionStart[factionId]
-	else 
-		session = 0
-	end
-
-	local current = barValue - bottomValue
-	local maximun = topValue - bottomValue
-	local color = colors[standingId] or colors[5]
-	local standingText = GetFactionLabel(standingId)
-	return current, maximun, color, standingText, nil, session
-end
-
-local function GetBarMainRepInfo()
-	local name, standingId, bottomValue, topValue, barValue, factionId, atWarWith, _
-	factionId = barFaction
-	if (factionId and factionId ~= 0) then
-		name, _, standingId, bottomValue, topValue, barValue, atWarWith = GetFactionInfoByID(factionId)
-	else
-		name, standingId, bottomValue, topValue, barValue, factionId = GetWatchedFactionInfo()
-		if (factionId) then
-			atWarWith = select(7, GetFactionInfoByID(factionId))
-		end
-	end
-	return {
-		name = name,
-		standingId = standingId,
-		bottomValue = bottomValue,
-		topValue = topValue,
-		barValue = barValue,
-		factionId = factionId,
-		atWarWith = atWarWith
-	}
-end
-
-local function IsMaxed(factionId, standingId)
-	-- Would really like a better way of handling this for inactive factions
-	if not factionId then return true end
-	if (IsMajorFaction(factionId)) then
-		return HasMaximumRenown(factionId) and GetCurrentRenownLevel(factionId) == MajorFactionMaxLevel(factionId)
-	end
-
-	local friendID, _, _, _, _, _, _, _, nextFriendThreshold = GetFriendshipReputation(factionId)
-
-	if friendID then
-		return not nextFriendThreshold
-	end
-
-	return standingId == 8
-end
-
 UpdateTablet = function(self)
     CloseDropDownMenus()
     f:SetScale( config.scale )
@@ -414,7 +302,6 @@ UpdateTablet = function(self)
 
     local menuFactionWidth, menuValuesWidth, menuToGoWidth, menuSessionWidth = 0, 0, 0, 0
     local itemFactionWidth, itemValuesWidth, itemToGoWidth, itemSessionWidth, button, inactive
-    local standingText = ""
 
     for i, f in next, factions do
         tables[wipe(f)] = true
@@ -425,37 +312,85 @@ UpdateTablet = function(self)
     nbEntries = 0
 
     for i = 1, GetNumFactions() do
-		local name, showValue, standingId, bottomValue, topValue, earnedValue, atWarWith, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionId = GetFactionInfo(i)
-        local percent = 0
-		
-		if name then
-            local repColors = config.blizzColorsInsteadBroker and config.blizzardColors or config.asciiColors
-            local value, max, color, standing, _, balance, texture = GetFactionValues(standingId, earnedValue, bottomValue, topValue, factionId, repColors)
-			local isCapped = false
-			if not string.find(standing, "Paragon") and not IsFactionInactive(i) then 
-				isCapped = IsMaxed(factionId, standingId)				
-			end
-
-            local percent = math.floor((value) * 100 / (max))
-            if (max == 0) then
-                percent = 100
-            end    			
-			local standingText = standing
-            local level = standingId
-
-            if isHeader and not (isChild and skipChild) then
-                skip = char.collapsedHeaders[name]
-                skipChild = skip and not isChild
+        local pValTtl = nil
+        local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
+		pNum = nil
+        if name then
+        if isHeader and not (isChild and skipChild) then
+            skip = char.collapsedHeaders[name]
+            skipChild = skip and not isChild
+        end
+        if not skip or isHeader and not (isChild and skipChild) then
+            local standingText = levels[level]
+            local isCapped = level == MAX_REPUTATION_REACTION
+            --If not Classic, do Paragon config
+            if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+                -- check to see if this is a renown faction
+				if (FactionID and C_Reputation.IsMajorFaction(FactionID)) then
+					local renownInfo = C_MajorFactions.GetMajorFactionData(FactionID)
+					if (renownInfo ~= nil) then
+						local renownRep = renownInfo.renownReputationEarned
+						local nextRenownThreshold = renownInfo.renownLevelThreshold
+						local renownLevel = renownInfo.renownLevel
+						standingText = "Renown " .. renownLevel
+						if ( nextRenownThreshold ) then
+							--pValTtl = renownRep
+							minVal, maxVal, value = 0, nextRenownThreshold, renownRep
+							textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+							isCapped = false
+						else
+							isCapped = true
+						end
+					end
+				end
+				if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
+                    local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
+                    local pMin = currValue - (currValue % threshold)
+                    local pMax = pMin + threshold
+                    pValTtl = currValue
+                    value   = value + currValue
+                    minVal  = minVal + pMin
+                    maxVal  = maxVal + pMax
+                    pNum = pMin/threshold
+                    level   = MAX_REPUTATION_REACTION + 1
+                    standingText = levels[level]
+                    isCapped = false
+                    textValue = ("%i / %i"):format(value-minVal, maxVal-minVal)
+                end
+                -- check if this is a friendship faction 
+				if (FactionID ~= nil and FactionID ~= 0) then
+					local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+					local friendID = friendInfo.friendshipFactionID
+					if (friendID ~= nil and friendID ~= 0) then
+						local friendRep = friendInfo.standing
+						local friendMaxRep = friendInfo.maxRep
+						local friendName = friendInfo.name
+						local friendText = friendInfo.text
+						local friendTexture = friendInfo.texture
+						local friendTextLevel = friendInfo.reaction
+						local friendThreshold = friendInfo.reactionThreshold
+						local nextFriendThreshold = friendInfo.nextThreshold
+						name = friendName
+						standingText = friendTextLevel
+						if ( nextFriendThreshold ) then
+							minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
+						elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
+							isCapped = false
+						else
+							isCapped = true
+						end
+					end
+				end
             end
-            if not skip or isHeader and not (isChild and skipChild) then
-                local textValue = ("%i / %i"):format(value, max)
-				local asciiColor = ("|cff%.2x%.2x%.2x"):format(color.r*255, color.g*255, color.b*255)
-			end
             if isCapped then 
                 textValue = standingText
             else
-                textValue = ("%i / %i"):format(value, max) 
-            end		
+                if pNum ~= nil and config.showParagonCount then
+                    textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) .. ' ('..pNum..')'
+                else
+                    textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+                end
+            end
 
             nbEntries = nbEntries + 1
             showValue = not isHeader or hasRep
@@ -467,7 +402,6 @@ UpdateTablet = function(self)
                 "header", isHeader,
                 "showValue", showValue,
                 "level", level,
-				"standingText", standingText,
                 "collapsed", isCollapsed,
                 "inactive", inactive,
                 "textValue", textValue,
@@ -480,28 +414,50 @@ UpdateTablet = function(self)
             if name == watchedFaction then focusedButton = button end
 
             if showValue then
-                local perc = percent / 100
-
-				-- Colorshift code
-				-- local colorshift = 0
-                -- if level > 9 then level = 9 end
-				-- if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
-                -- if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
-                -- local color = config.blizzColorsInstead and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
-
+                local perc = 0
+				local colorshift = 0
+				if isCapped then 
+					perc = 1
+				else
+					--print(name,isCapped,minval,maxval,level,MAX_REPUTATION_REACTION)
+					if ((maxVal - minVal) ~= 0) then
+						perc = (value - minVal) / (maxVal - minVal)
+					end
+				end
+                if level > 9 then level = 9 end
+				if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+                if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
+                local color = config.blizzColorsInstead and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
                 button.bar:SetVertexColor( color.r, color.g, color.b )
                 button.bar:SetWidth( SIMPLE_BAR_WIDTH * (perc == 0 and 0.0001 or perc) )
                 button.bar:SetTexture(config.barTexture)
                 if config.showRawInstead and not config.showSeparateValues then
                     button.fs:SetText(button.rep.textValue)
                 else
-                    button.fs:SetText(standingText) 
+                    button.fs:SetText( standingText ) -- this was levels[level], but that breaks standingText changes
+                    --if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+					--	if (FactionID ~= nil and FactionID ~= 0) then
+					--		local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+					--		local friendID   = friendInfo.friendshipFactionID
+					--		if (friendID ~= nil and friendID ~= 0) then
+					--			local friendTextLevel = friendInfo.reaction
+					--			button.fs:SetText( friendTextLevel )
+					--		end
+                    --  end
+                    --end
                 end
                 button.bar:Show() button.fs:Show()
                 if config.showSeparateValues then button.values:SetText(button.rep.textValue) end
-                if config.showRepToGo then button.togo:SetText( button.rep.level == 8 and "-" or max - value ) end
+                if config.showRepToGo then button.togo:SetText( button.rep.level == 8 and "-" or maxVal - value ) end
                 if config.showSessionGain then
-                    local gain = balance
+                    local gain = 0
+                    if pValTtl then
+                        if not startingRep[name] then startingRep[name] = pValTtl end
+                        gain = pValTtl - startingRep[name]
+                    else
+                        if not startingRep[name] then startingRep[name] = value end
+                        gain = value - startingRep[name]
+                    end
                     button.session:SetText( gain == 0 and "-" or gain)
                 end
             else
@@ -523,7 +479,7 @@ UpdateTablet = function(self)
             if itemToGoWidth > menuToGoWidth then menuToGoWidth = itemToGoWidth end
             itemSessionWidth = button.session:GetStringWidth()
             if itemSessionWidth > menuSessionWidth then menuSessionWidth = itemSessionWidth end
-        end --;end
+        end;end
     end
 
     if config.showHints then
@@ -725,131 +681,211 @@ local block = LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("|cffffb366A
 local firstCall = true
 
 UpdateBar = function()
-    --local name, _, level, minVal, maxVal, value, FactionID
+    local name, _, level, minVal, maxVal, value, FactionID
     if firstCall then
         for i=1, GetNumFactions() do
-			local name, _, _, _, _, earnedValue, _, _, _, _, _, _, _, factionId = GetFactionInfo(i)
-			if (name) then
-			if (factionId) then
-				local friendID, friendRep = GetFriendshipReputation(factionId)
-				if (IsMajorFaction(factionId)) then
-					local data = GetMajorFactionData(factionId)
-					local isCapped = HasMaximumRenown(factionId)
-					earnedValue = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
-					sessionStartMajorFaction[factionId] = {
-						startLvl = data.renownLevel,
-						[data.renownLevel] = { start = earnedValue, max = data.renownLevelThreshold },
-					}
-					sessionStart[factionId] = earnedValue
-					lastReps[factionId] = {
-						lvl = data.renownLevel,
-						rep = data.renownReputationEarned,
-					}
-				elseif (friendID) then
-					if (C_Reputation.IsFactionParagon(factionId)) then 
-						friendRep, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
-					end
-					sessionStart[factionId] = friendRep
-					lastReps[factionId] = friendRep
-				elseif name then
-					if (C_Reputation.IsFactionParagon(factionId)) then 
-						earnedValue, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
-					end
-					sessionStart[factionId] = earnedValue
-					lastReps[factionId] = earnedValue
-				end
-			end
-			end
-			if name == watchedFaction then watchedIndex = i end
-		end
+            local pValTtl = nil
+
+            local name, showValue, level, minVal, maxVal, value, atWar, canBeAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, FactionID = GetFactionInfo(i)
+            if name then
+                if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+                    if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
+                        local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
+                        pValTtl = currValue
+                        if not isHeader or hasRep then startingRep[name] = pValTtl end
+                    else
+						if (FactionID and C_Reputation.IsMajorFaction(FactionID)) then
+							local renownInfo = C_MajorFactions.GetMajorFactionData(FactionID)
+							if (renownInfo ~= nil) then
+								local nextRenownThreshold = renownInfo.renownLevelThreshold
+								if ( nextRenownThreshold ) then
+									if not isHeader or hasRep then startingRep[name] = renownInfo.renownReputationEarned end
+								else
+									if not isHeader or hasRep then startingRep[name] = value end
+								end
+							else
+								if not isHeader or hasRep then startingRep[name] = value end
+							end
+						elseif (FactionID and C_GossipInfo.GetFriendshipReputation(FactionID)) then
+							-- this code is to solve for condition where GetFactionInfo minVal and maxVal are eq, but friendInfo.nextThreshold is not NULL
+							-- this seems to indicate a bug in the rep where GetFactionInfo is not returning proper values, because minVal should
+							-- only be equal to maxVal when reputation is capped.  Seems to only be happening on Bodyguards from WoD rep
+							-- thus, using Value from GetFactionInfo here results in an invalid SessionGain number
+							local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+							local friendID = friendInfo.friendshipFactionID
+							if (friendID ~= nil and friendID ~= 0) then
+								local nextFriendThreshold = friendInfo.nextThreshold
+								if ( nextFriendThreshold ) then
+									if not isHeader or hasRep then startingRep[name] = friendInfo.standing end
+								else
+									if not isHeader or hasRep then startingRep[name] = value end
+								end
+							else
+								if not isHeader or hasRep then startingRep[name] = value end
+							end
+						end
+                    end
+                else
+                    if not isHeader or hasRep then startingRep[name] = value end
+                end
+                if name == watchedFaction then FactionID = factID; watchedIndex = i end
+            end
+        end
         firstCall = false
     end
 
     if updateBeforeBlizzard then
         updateBeforeBlizzard = false
-        _, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
+        name, _, level, minVal, maxVal, value, _, _, _, _, _, _, _, FactionID = GetFactionInfo(watchedIndex)
     else    
         if watchedIndex then
-			_, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
+            name, _, level, minVal, maxVal, value, _, _, _, _, _, _, _, FactionID = GetFactionInfo(watchedIndex)
         else 
-			watchedFaction, _, _, _, _, barFaction = GetWatchedFactionInfo()
+            name, level, minVal, maxVal, value = GetWatchedFactionInfo()
         end
     end
-	
-	local info = GetBarMainRepInfo()
-	if not info or not info.name then
-		return "", ""
-	end
 
-    local repColors = config.blizzColorsInsteadBroker and config.blizzardColors or config.asciiColors
-	local value, max, color, standingText, hasRewardPending, balance, texture = GetFactionValues(
-			info.standingId, info.barValue, info.bottomValue, info.topValue, info.factionId, repColors
-	)
-	
-    local perc = math.floor((value) * 100 / (max))
-    if (max == 0) then
-        perc = 100
+    if not name or name == OTHER then
+        block.text = NOT_APPLICABLE--"No Faction"
+        return
     end
 
-	local isCapped = false
-	if not string.find(standingText, "Paragon") then 
-		isCapped = IsMaxed(info.factionId, info.standingId)				
-	end
-	--Debugging
-	--print(info.name,barFaction,info.factionId,sessionStart[info.factionId],info.standingId,info.barValue,info.bottomValue,info.topValue,isCapped)
-
-    local level  = info.standingId
+    local pValTtl = nil
+    local isCapped = level == MAX_REPUTATION_REACTION
+    local standingText = levels[level]
+    pNum = nil
+    if FactionID then
+        if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+			if (FactionID and C_Reputation.IsMajorFaction(FactionID)) then
+				local renownInfo = C_MajorFactions.GetMajorFactionData(FactionID)
+				if (renownInfo ~= nil) then
+					local renownRep = renownInfo.renownReputationEarned
+					local nextRenownThreshold = renownInfo.renownLevelThreshold
+					local renownLevel = renownInfo.renownLevel
+					standingText = "Renown " .. renownLevel
+					if ( nextRenownThreshold ) then
+						--pValTtl = renownRep
+						minVal, maxVal, value = 0, nextRenownThreshold, renownRep
+						textValue = ("%i / %i"):format(value-minVal, maxVal-minVal) 
+						isCapped = false
+					else
+						isCapped = true
+					end
+				end
+			end
+            if (FactionID and C_Reputation.IsFactionParagon(FactionID)) then
+                local currValue, threshold, rewardQuestID, hasRewardPending = C_Reputation.GetFactionParagonInfo(FactionID)
+                local pMin = currValue - (currValue % threshold)
+                local pMax = pMin + threshold
+                pValTtl = currValue
+                value   = value + currValue
+                minVal  = minVal + pMin
+                maxVal  = maxVal + pMax
+                pNum = pMin/threshold
+                level   = MAX_REPUTATION_REACTION + 1
+                standingText = levels[level]
+                isCapped = false
+            end
+            -- check if this is a friendship faction 
+			if (FactionID ~= nil and FactionID ~= 0) then
+				local friendInfo = C_GossipInfo.GetFriendshipReputation(FactionID)
+				local friendID = friendInfo.friendshipFactionID
+				if (friendID ~= nil and friendID ~= 0) then
+					local friendRep = friendInfo.standing
+					local friendMaxRep = friendInfo.maxRep
+					local friendName = friendInfo.name
+					local friendText = friendInfo.text
+					local friendTexture = friendInfo.texture
+					local friendTextLevel = friendInfo.reaction
+					local friendThreshold = friendInfo.reactionThreshold
+					local nextFriendThreshold = friendInfo.nextThreshold
+					name = friendName
+					standingText = friendTextLevel
+					if ( nextFriendThreshold ) then
+						minVal, maxVal, value = friendThreshold, nextFriendThreshold, friendRep
+					elseif (friendID and C_Reputation.IsFactionParagon(friendID)) then
+						isCapped = false
+					else
+						isCapped = true
+					end
+				end
+			end
+        else
+            --not sure this is needed here
+            --isCapped = true
+        end
+    end
+    
     local c1, c2 = config.asciiColors[level], config.asciiColors[level]
+    local perc = 0
+    if isCapped then perc = 1 else
+		if ((maxVal - minVal) ~= 0) then
+			perc = (value - minVal) / (maxVal - minVal)
+		end
+	end
 
-	local icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor"
-	block.icon = texture or icon
     if config.blockDisplay == "text" then
         wipe(tt)
-        local asciiColor = ("|cff%.2x%.2x%.2x"):format(color.r*255, color.g*255, color.b*255)
+        if level > 9 then level = 9 end
+		local colorshift = 0
+		if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+        if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
+        local asciiColor = config.blizzColorsInsteadBroker and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
+        asciiColor = ("|cff%.2x%.2x%.2x"):format(asciiColor.r*255, asciiColor.g*255, asciiColor.b*255)
         if config.textStanding then
             tt[#tt+1] = (#tt>0 and "" or asciiColor)..standingText.."|r"
         end
         if config.textPerc then
-            tt[#tt+1] = ("%s%i%%|r"):format(#tt>0 and "" or asciiColor, perc)
-            --tt[#tt+1] = ("%s%i%%|r"):format(#tt>0 and "" or asciiColor, perc)
+            tt[#tt+1] = ("%s%i%%|r"):format(#tt>0 and "" or asciiColor, floor(perc*100))
         end
         if config.textValues then
             if not isCapped then
                 if pNum ~= nil and config.textParagon then
-                    tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value, max) .. ' ('..pNum..')'
+                    tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal) .. ' ('..pNum..')'
                 else
-                    tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value, max)
+                    tt[#tt+1] = ("%s%i/%i|r"):format(#tt>0 and "" or asciiColor, value - minVal, maxVal - minVal)
                 end
             end
         end
         if config.textToGo then
             if not isCapped then
-                tt[#tt+1] = ("%s%i to go|r"):format(#tt>0 and "" or asciiColor, max - value)
+                tt[#tt+1] = ("%s%i to go|r"):format(#tt>0 and "" or asciiColor, maxVal - value)
             else
                 tt[#tt+1] = ("Capped|r") 
             end
         end
         if config.textSession then
-			tt[#tt+1] = ("%sSession %s%i|r"):format(#tt>0 and "" or asciiColor, balance >= 0 and "+" or "", balance)
+            local gain = 0
+			if pValTtl then
+                if not startingRep[name] then startingRep[name] = pValTtl end
+                gain = pValTtl - startingRep[name]
+            else
+                if not startingRep[name] then startingRep[name] = value end
+                gain = value - startingRep[name]
+            end
+            tt[#tt+1] = ("%sSession %s%i|r"):format(#tt>0 and "" or asciiColor, gain >= 0 and "+" or "", gain)
         end
         if config.textFaction then
-            -- move this check to rep function
-			if config.textFactionColor == "none"     then color = defaultColor end
-            if config.textFactionColor == "ascii"    then color = config.asciiColors[level] end 
-            if config.textFactionColor == "blizzard" then color = config.blizzardColors[level] end		
-            tinsert(tt,1, ("|cff%.2x%.2x%.2x%s|r"):format(color.r*255, color.g*255, color.b*255, info.name) )
+			local colorshift = 0
+			if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+            if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
+            local color = defaultColor
+            if config.textFactionColor == "none"     then color = defaultColor end
+            if config.textFactionColor == "ascii"    then color = config.asciiColors[level+colorshift] end 
+            if config.textFactionColor == "blizzard" then color = config.blizzardColors[level+colorshift] end
+            tinsert(tt,1, ("|cff%.2x%.2x%.2x%s|r"):format(color.r*255, color.g*255, color.b*255, name) )
         end
         block.text = table.concat(tt, " - ")
         wipe(tt)
     elseif config.blockDisplay == "ascii" then
         local steps = perc * ASCII_LENGTH
         if config.asciiBar == "singleColor" then c1 = defaultColor end
-        --need to figure this out
         block.text = ("|cff%.2x%.2x%.2x%s|cff%.2x%.2x%.2x%s"):format(
             c2.r*255, c2.g*255, c2.b*255, ("||"):rep(steps),
             c1.r*255, c1.g*255, c1.b*255, ("||"):rep(ASCII_LENGTH-steps) )
     end
 end
+
 
 local fsInc = FACTION_STANDING_INCREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
 local fsInc2 = FACTION_STANDING_INCREASED_ACH_BONUS:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
@@ -886,11 +922,6 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
     if faction == watchedFaction then UpdateBar() end
 end
 
-function f:MAJOR_FACTION_RENOWN_LEVEL_CHANGED(factionId, newRenownLevel, oldRenownLevel)
-	local data = GetMajorFactionData(factionId)
-	sessionStartMajorFaction[factionId][newRenownLevel] = { start = 0, max = data.renownLevelThreshold }
-	UpdateBar()
-end
 
 function f:SetupConfigMenu()
     configMenu = CreateFrame("Frame", "AraReputationConfigMenu")
@@ -943,9 +974,8 @@ function f:SetupConfigMenu()
         { text = levels[5], color = "blizzardColors", index = 5 },
         { text = levels[6], color = "blizzardColors", index = 6 },
         { text = levels[7], color = "blizzardColors", index = 7 },
-        { text = levels[8],  color = "blizzardColors", index = 8 },
-        { text = levels[9],  color = "blizzardColors", index = "paragon" },
-        { text = levels[10], color = "blizzardColors", index = "renown" } } },
+        { text = levels[8], color = "blizzardColors", index = 8 },
+        { text = levels[9], color = "blizzardColors", index = 9 } } },
     { text = "ASCII Colors", submenu = {
         { text = levels[1], color = "asciiColors", index = 1 },
         { text = levels[2], color = "asciiColors", index = 2 },
@@ -954,9 +984,8 @@ function f:SetupConfigMenu()
         { text = levels[5], color = "asciiColors", index = 5 },
         { text = levels[6], color = "asciiColors", index = 6 },
         { text = levels[7], color = "asciiColors", index = 7 },
-        { text = levels[8],  color = "asciiColors", index = 8 },
-        { text = levels[9],  color = "asciiColors", index = "paragon" },
-        { text = levels[10], color = "asciiColors", index = "renown" } } },
+        { text = levels[8], color = "asciiColors", index = 8 },
+        { text = levels[9], color = "asciiColors", index = 9 } } },
     { text = "Color Options", submenu = {
         { text = "Use Blizzard colors for broker", check = "blizzColorsInsteadBroker" },
         { text = "Use Blizzard colors for tooltip", check = "blizzColorsInstead" },
@@ -1102,10 +1131,7 @@ function f:ADDON_LOADED(addon)
     if addon ~= addonName then return end
 
     AraReputationsDB = AraReputationsDB or defaultConfig
-    if not AraReputationsDB.blizzardColors["paragon"] then AraReputationsDB.blizzardColors["paragon"] = { r= 0,  g= .6,   b= .1  } end --insert Paragon color
-    if not AraReputationsDB.blizzardColors["renown"]  then AraReputationsDB.blizzardColors["renown"]  = { r= 0,  g= .75,  b= .94 } end --insert Renown color
-    if not AraReputationsDB.asciiColors["paragon"]    then AraReputationsDB.asciiColors["paragon"] = { r= .4,  g= 0,   b= .6  } end --insert Paragon color
-    if not AraReputationsDB.asciiColors["renown"]     then AraReputationsDB.asciiColors["renown"]  = { r= 0,  g= .75,  b= .94 } end --insert Renown color
+    if not AraReputationsDB.blizzardColors[9] then table.insert(AraReputationsDB.blizzardColors,{ r= 0,   g= .6,  b= .1  }) end --insert Paragon color
     config = AraReputationsDB
     for k, v in next, defaultConfig do -- easy upgrade
         if config[k] == nil then config[k] = v end
@@ -1128,7 +1154,6 @@ function f:ADDON_LOADED(addon)
     f:SetScript("OnEnter", Menu_OnEnter)
     f:SetScript("OnLeave", Menu_OnLeave)
     f:RegisterEvent"CHAT_MSG_COMBAT_FACTION_CHANGE"
-    f:RegisterEvent"MAJOR_FACTION_RENOWN_LEVEL_CHANGED"
 
 --  slider = CreateFrame("Slider", nil, f, AraBackdropTemplate)
     slider = CreateFrame("Slider", nil, f, BackdropTemplateMixin and "BackdropTemplate")
