@@ -336,7 +336,7 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			if hasRewardPending then
 				standingText = GetFactionLabel("paragon") .. " |A:ParagonReputation_Bag:0:0|a" 
 			end
-			sessionStart[factionId] = sessionStart[factionId] or barValue
+			sessionStart[factionId] = sessionStart[factionId] or currentValue
 			session = currentValue - sessionStart[factionId]
 			--Debugging
 			--print("ParaSession:",session,currentValue,threshold,barValue,sessionStart[factionId])
@@ -460,7 +460,15 @@ UpdateTablet = function(self)
             nbEntries = nbEntries + 1
             showValue = not isHeader or hasRep
             if isHeader and name == FACTION_INACTIVE then inactive = true end
-            isCollapsed = char.collapsedHeaders[name] or isCollapsed
+            if (not isCollapsed and char.collapsedHeaders[name]) then
+				-- So the rep isn't collapsed, but we have it as collapsed.
+				-- It was updated somewhere outside of our ecosystem
+				-- This messes with button states for the + and - button
+				-- Proper thing here is to reset our saved copy with the 
+				-- current state
+				char.collapsedHeaders[name] = isCollapsed
+			end
+			isCollapsed = char.collapsedHeaders[name] or isCollapsed
             factions[#factions+1] = new(
                 "index", i,
                 "name", name,
