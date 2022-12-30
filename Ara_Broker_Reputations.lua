@@ -477,6 +477,7 @@ UpdateTablet = function(self)
                 "level", level,
 				"standingText", standingText,
                 "collapsed", isCollapsed,
+                "isCapped", isCapped,
                 "inactive", inactive,
                 "textValue", textValue,
                 "FactionID", FactionID
@@ -585,23 +586,14 @@ UpdateTablet = function(self)
                 -- alphabetically by name (within Exalted or Best Friend)
                 -- This also fixes an error where tonumber(aRep) and tonumber (bRep) for Exalted and 
                 -- Best Friend were causing errors because they return nil as the numeric rep value
-                if a.rep.textValue == levels[8] then 
+                if a.rep.isCapped then
                     --Exalted Rep
                     repSortByName = true
-                --elseif a.rep.textValue == (select(7,C_GossipInfo.GetFriendshipReputation(tonumber(a.rep.FactionID)))) then
-                    --Needs fixed for Dragonflight
-					--Best Friend Rep
-                    --repSortByName = true
                 else
                     aRep = string.gsub(a.rep.textValue, "/.+", "")
                 end
-                if b.rep.textValue == levels[8] then
-                    --Exalted Rep
+                if b.rep.isCapped then
                     repSortByName = true
-                --elseif b.rep.textValue == (select(7,C_GossipInfo.GetFriendshipReputation(tonumber(b.rep.FactionID)))) then
-                    --Needs fixed for Dragonflight
-                    --Best Friend Rep
-                    --repSortByName = true
                 else
                     bRep = string.gsub(b.rep.textValue, "/.+", "")
                 end
@@ -1136,7 +1128,9 @@ function f:ADDON_LOADED(addon)
     f:SetScript("OnEnter", Menu_OnEnter)
     f:SetScript("OnLeave", Menu_OnLeave)
     f:RegisterEvent"CHAT_MSG_COMBAT_FACTION_CHANGE"
-    f:RegisterEvent"MAJOR_FACTION_RENOWN_LEVEL_CHANGED"
+	if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
+		f:RegisterEvent"MAJOR_FACTION_RENOWN_LEVEL_CHANGED"
+	end
 
 --  slider = CreateFrame("Slider", nil, f, AraBackdropTemplate)
     slider = CreateFrame("Slider", nil, f, BackdropTemplateMixin and "BackdropTemplate")

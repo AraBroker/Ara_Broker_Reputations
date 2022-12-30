@@ -1,7 +1,7 @@
 ## Interface: 30400
 
 ## Title: Ara - Broker - Reputations
-## Version: r60-alpha
+## Version: r60-beta
 ## Author: Altelulex, VikingKing
 ## Notes: Display watched faction and a customizable tree view of faction bars.
 ## OptionalDeps:
@@ -11,4 +11,4 @@ libs\LibStub.lua
 libs\CallbackHandler-1.0.lua
 libs\LibDataBroker-1.1.lua
 
-Ara_Broker_Reputations_legacy.lua
+Ara_Broker_Reputations.lua
