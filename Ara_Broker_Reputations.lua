@@ -32,16 +32,16 @@ local defaultConfig = {
     blizzColorsDefault = false,
     blizzardColors = FACTION_BAR_COLORS,  --hack to add back Blizzard colors
     asciiColors = {
-        [1]  = { r= .54, g= 0,   b= 0   }, -- hated
-        [2]  = { r= 1,   g= .10, b= .1  }, -- hostile
-        [3]  = { r= 1,   g= .55, b= 0   }, -- unfriendly
-        [4]  = { r= .87, g= .87, b= .87 }, -- neutral
-        [5]  = { r= 1,   g= 1,   b= 0   }, -- friendly
-        [6]  = { r= .1,  g= .9,  b= .1  }, -- honored
-        [7]  = { r= .25, g= .41, b= .88 }, -- revered
-        [8]  = { r= .6,  g= .2,  b= .8  }, -- exalted
-        ["paragon"]  = { r= .4,  g= 0,   b= .6  }, -- paragon
-        ["renown"]   = { r= 0,   g= .75, b= .94 }, -- renown
+        [1]   = { r= .54, g= 0,   b= 0   }, -- hated
+        [2]   = { r= 1,   g= .10, b= .1  }, -- hostile
+        [3]   = { r= 1,   g= .55, b= 0   }, -- unfriendly
+        [4]   = { r= .87, g= .87, b= .87 }, -- neutral
+        [5]   = { r= 1,   g= 1,   b= 0   }, -- friendly
+        [6]   = { r= .1,  g= .9,  b= .1  }, -- honored
+        [7]   = { r= .25, g= .41, b= .88 }, -- revered
+        [8]   = { r= .6,  g= .2,  b= .8  }, -- exalted
+        [9]   = { r= .4,  g= 0,   b= .6  }, -- paragon
+        [10]  = { r= 0,   g= .75, b= .94 }, -- renown
     },
     useTipTacSkin = true,
 }
@@ -50,8 +50,8 @@ local defaultConfig = {
 local levelshift = {
 	[2135] = 2,  -- Chromie
 }
-defaultConfig["blizzardColors"]["paragon"] = { r= 0,  g= .6,   b= .1  }
-defaultConfig["blizzardColors"]["renown"]  = { r= 0,  g= .75,  b= .94 }
+table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
+table.insert(defaultConfig.blizzardColors,{ r= 0,  g= .75,  b= .94 })
 
 local IsMajorFaction = C_Reputation.IsMajorFaction or nop
 local GetMajorFactionData = C_MajorFactions and C_MajorFactions.GetMajorFactionData and C_MajorFactions.GetMajorFactionData or nop
@@ -315,7 +315,7 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			local standingText = (RENOWN_LEVEL_LABEL .. data.renownLevel)
 			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(data.textureKit)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
-            return current, data.renownLevelThreshold, colors.renown, standingText, nil, session, texture            
+            return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
 		end
 
 		if (standingId == nil) then
@@ -323,8 +323,8 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 		end
 
 		if (C_Reputation.IsFactionParagon(factionId)) then
-			-- local color = colors[9]
-            local color = colors.paragon
+			local color = colors[9]
+            --local color = colors.paragon
 			local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
 			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
 			local standingText = ""
@@ -334,7 +334,11 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 				standingText = GetFactionLabel("paragon") 
 			end
 			if hasRewardPending then
-				standingText = GetFactionLabel("paragon") .. " |A:ParagonReputation_Bag:0:0|a" 
+				if standingText then 
+					standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
+				else
+					standingText = GetFactionLabel("paragon") .. " |A:ParagonReputation_Bag:0:0|a" 
+				end
 			end
 			sessionStart[factionId] = sessionStart[factionId] or currentValue
 			session = currentValue - sessionStart[factionId]
@@ -944,8 +948,8 @@ function f:SetupConfigMenu()
         { text = levels[6], color = "blizzardColors", index = 6 },
         { text = levels[7], color = "blizzardColors", index = 7 },
         { text = levels[8],  color = "blizzardColors", index = 8 },
-        { text = levels[9],  color = "blizzardColors", index = "paragon" },
-        { text = levels[10], color = "blizzardColors", index = "renown" } } },
+        { text = levels[9],  color = "blizzardColors", index = 9 },
+        { text = levels[10], color = "blizzardColors", index = 10 } } },
     { text = "ASCII Colors", submenu = {
         { text = levels[1], color = "asciiColors", index = 1 },
         { text = levels[2], color = "asciiColors", index = 2 },
@@ -955,8 +959,8 @@ function f:SetupConfigMenu()
         { text = levels[6], color = "asciiColors", index = 6 },
         { text = levels[7], color = "asciiColors", index = 7 },
         { text = levels[8],  color = "asciiColors", index = 8 },
-        { text = levels[9],  color = "asciiColors", index = "paragon" },
-        { text = levels[10], color = "asciiColors", index = "renown" } } },
+        { text = levels[9],  color = "asciiColors", index = 9 },
+        { text = levels[10], color = "asciiColors", index = 10 } } },
     { text = "Color Options", submenu = {
         { text = "Use Blizzard colors for broker", check = "blizzColorsInsteadBroker" },
         { text = "Use Blizzard colors for tooltip", check = "blizzColorsInstead" },
@@ -1102,10 +1106,10 @@ function f:ADDON_LOADED(addon)
     if addon ~= addonName then return end
 
     AraReputationsDB = AraReputationsDB or defaultConfig
-    if not AraReputationsDB.blizzardColors["paragon"] then AraReputationsDB.blizzardColors["paragon"] = { r= 0,  g= .6,   b= .1  } end --insert Paragon color
-    if not AraReputationsDB.blizzardColors["renown"]  then AraReputationsDB.blizzardColors["renown"]  = { r= 0,  g= .75,  b= .94 } end --insert Renown color
-    if not AraReputationsDB.asciiColors["paragon"]    then AraReputationsDB.asciiColors["paragon"] = { r= .4,  g= 0,   b= .6  } end --insert Paragon color
-    if not AraReputationsDB.asciiColors["renown"]     then AraReputationsDB.asciiColors["renown"]  = { r= 0,  g= .75,  b= .94 } end --insert Renown color
+    if not AraReputationsDB.blizzardColors[9]  then AraReputationsDB.blizzardColors[9]  = { r= 0,  g= .6,   b= .1  } end --insert Paragon color
+    if not AraReputationsDB.blizzardColors[10] then AraReputationsDB.blizzardColors[10] = { r= 0,  g= .75,  b= .94 } end --insert Renown color
+    if not AraReputationsDB.asciiColors[9]     then AraReputationsDB.asciiColors[9]     = { r= .4,  g= 0,   b= .6  } end --insert Paragon color
+    if not AraReputationsDB.asciiColors[10]    then AraReputationsDB.asciiColors[10]    = { r= 0,  g= .75,  b= .94 } end --insert Renown color
     config = AraReputationsDB
     for k, v in next, defaultConfig do -- easy upgrade
         if config[k] == nil then config[k] = v end
