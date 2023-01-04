@@ -109,7 +109,6 @@ highlight:SetTexture"Interface\\QuestFrame\\UI-QuestTitleHighlight"
 highlight:SetBlendMode"ADD"
 highlight:SetAlpha(0)
 
-
 local modules = {}
 
 function f:AddModule(name, module)
@@ -149,7 +148,6 @@ local function Menu_OnLeave(self)
     if not f:IsMouseOver() then f:Hide() end
 end
 
-
 local orgSetWatchedFactionIndex = SetWatchedFactionIndex
 function SetWatchedFactionIndex(...)
     orgSetWatchedFactionIndex(...)
@@ -183,7 +181,6 @@ local function Faction_OnClick(self, button)
         focusedButton = self
     end
 end
-
 
 local function Scroll(self, delta)
     if IsControlKeyDown() then
@@ -242,7 +239,6 @@ local buttons = setmetatable( {}, { __index = function(table, index)
 
     return button
 end } )
-
 
 local function UpdateScrollButtons(nbEntries)
     for i=1, sliderValue do buttons[i]:Hide() end
@@ -940,24 +936,24 @@ function f:SetupConfigMenu()
         end
     end},
     { text = "Blizzard Colors", submenu = {
-        { text = levels[1], color = "blizzardColors", index = 1 },
-        { text = levels[2], color = "blizzardColors", index = 2 },
-        { text = levels[3], color = "blizzardColors", index = 3 },
-        { text = levels[4], color = "blizzardColors", index = 4 },
-        { text = levels[5], color = "blizzardColors", index = 5 },
-        { text = levels[6], color = "blizzardColors", index = 6 },
-        { text = levels[7], color = "blizzardColors", index = 7 },
+        { text = levels[1],  color = "blizzardColors", index = 1 },
+        { text = levels[2],  color = "blizzardColors", index = 2 },
+        { text = levels[3],  color = "blizzardColors", index = 3 },
+        { text = levels[4],  color = "blizzardColors", index = 4 },
+        { text = levels[5],  color = "blizzardColors", index = 5 },
+        { text = levels[6],  color = "blizzardColors", index = 6 },
+        { text = levels[7],  color = "blizzardColors", index = 7 },
         { text = levels[8],  color = "blizzardColors", index = 8 },
         { text = levels[9],  color = "blizzardColors", index = 9 },
         { text = levels[10], color = "blizzardColors", index = 10 } } },
     { text = "ASCII Colors", submenu = {
-        { text = levels[1], color = "asciiColors", index = 1 },
-        { text = levels[2], color = "asciiColors", index = 2 },
-        { text = levels[3], color = "asciiColors", index = 3 },
-        { text = levels[4], color = "asciiColors", index = 4 },
-        { text = levels[5], color = "asciiColors", index = 5 },
-        { text = levels[6], color = "asciiColors", index = 6 },
-        { text = levels[7], color = "asciiColors", index = 7 },
+        { text = levels[1],  color = "asciiColors", index = 1 },
+        { text = levels[2],  color = "asciiColors", index = 2 },
+        { text = levels[3],  color = "asciiColors", index = 3 },
+        { text = levels[4],  color = "asciiColors", index = 4 },
+        { text = levels[5],  color = "asciiColors", index = 5 },
+        { text = levels[6],  color = "asciiColors", index = 6 },
+        { text = levels[7],  color = "asciiColors", index = 7 },
         { text = levels[8],  color = "asciiColors", index = 8 },
         { text = levels[9],  color = "asciiColors", index = 9 },
         { text = levels[10], color = "asciiColors", index = 10 } } },
