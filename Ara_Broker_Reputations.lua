@@ -281,10 +281,12 @@ GetFriendshipReputation = GetFriendshipReputation or nop
 local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 	if (not sessionStartMajorFaction[factionId]) then
 		local data = GetMajorFactionData(factionId)
+		local isCapped = HasMaximumRenown(factionId)
+		local earnedValue = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
 		sessionStartMajorFaction[factionId] = {
 			startLvl = data.renownLevel,
-			[data.renownLevel] = { start = 0, max = data.renownLevelThreshold }
-		}
+			[data.renownLevel] = { start = earnedValue, max = data.renownLevelThreshold },
+		}		
 	end
 	local balance = 0
 	local start = sessionStartMajorFaction[factionId].startLvl
@@ -444,95 +446,87 @@ UpdateTablet = function(self)
             local level = standingId
 
             if isHeader and not (isChild and skipChild) then
-                skip = char.collapsedHeaders[name]
+				skip = char.collapsedHeaders[name]
                 skipChild = skip and not isChild
             end
             if not skip or isHeader and not (isChild and skipChild) then
                 local textValue = ("%i / %i"):format(value, max)
 				local asciiColor = ("|cff%.2x%.2x%.2x"):format(color.r*255, color.g*255, color.b*255)
+				if isCapped then 
+					textValue = standingText
+				else
+					textValue = ("%i / %i"):format(value, max) 
+				end		
+
+				nbEntries = nbEntries + 1
+				showValue = not isHeader or hasRep
+				if isHeader and name == FACTION_INACTIVE then inactive = true end
+				isCollapsed = char.collapsedHeaders[name] or isCollapsed
+				factions[#factions+1] = new(
+					"index", i,
+					"name", name,
+					"header", isHeader,
+					"showValue", showValue,
+					"level", level,
+					"standingText", standingText,
+					"collapsed", isCollapsed,
+					"isCapped", isCapped,
+					"inactive", inactive,
+					"textValue", textValue,
+					"FactionID", FactionID
+				)
+				button = buttons[nbEntries]
+				button:SetScript("OnClick", Faction_OnClick)
+				button.rep = factions[#factions]
+				button.faction:SetText( (name == watchedFaction and "|cffe67319" or isHeader and "|cffffffff" or "|cffffd100")..name )
+				if name == watchedFaction then focusedButton = button end
+
+				if showValue then
+					local perc = percent / 100
+
+					-- Colorshift code
+					-- local colorshift = 0
+					-- if level > 9 then level = 9 end
+					-- if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
+					-- if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
+					-- local color = config.blizzColorsInstead and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
+
+					button.bar:SetVertexColor( color.r, color.g, color.b )
+					button.bar:SetWidth( SIMPLE_BAR_WIDTH * (perc == 0 and 0.0001 or perc) )
+					button.bar:SetTexture(config.barTexture)
+					if config.showRawInstead and not config.showSeparateValues then
+						button.fs:SetText(button.rep.textValue)
+					else
+						button.fs:SetText(standingText) 
+					end
+					button.bar:Show() button.fs:Show()
+					if config.showSeparateValues then button.values:SetText(button.rep.textValue) end
+					if config.showRepToGo then button.togo:SetText( button.rep.level == 8 and "-" or max - value ) end
+					if config.showSessionGain then
+						local gain = balance
+						button.session:SetText( gain == 0 and "-" or gain)
+					end
+				else
+					button.bar:Hide() button.fs:Hide() button.bg:Hide()
+					if nbEntries > 1 then button.values:Hide() button.togo:Hide() button.session:Hide() end
+				end
+				button.icon:SetTexture(not isHeader and "" or isCollapsed and "Interface\\Buttons\\UI-PlusButton-UP" or "Interface\\Buttons\\UI-MinusButton-UP")
+				button.icon:SetPoint("LEFT", button, "LEFT", isChild and ICON_SIZE + TEXT_OFFSET or 0, 0)
+
+				if nbEntries == 1 then
+					button.togo:SetText("|cffffffffTo Go")
+					button.session:SetText("|cffffffffSession")
+				end
+				itemFactionWidth = button.faction:GetStringWidth() + (isChild and ICON_SIZE + TEXT_OFFSET or 0)
+				if itemFactionWidth > menuFactionWidth then menuFactionWidth = itemFactionWidth end
+				itemValuesWidth = button.values:GetStringWidth()
+				if itemValuesWidth > menuValuesWidth then menuValuesWidth = itemValuesWidth end
+				itemToGoWidth = button.togo:GetStringWidth()
+				if itemToGoWidth > menuToGoWidth then menuToGoWidth = itemToGoWidth end
+				itemSessionWidth = button.session:GetStringWidth()
+				if itemSessionWidth > menuSessionWidth then menuSessionWidth = itemSessionWidth end
 			end
-            if isCapped then 
-                textValue = standingText
-            else
-                textValue = ("%i / %i"):format(value, max) 
-            end		
-
-            nbEntries = nbEntries + 1
-            showValue = not isHeader or hasRep
-            if isHeader and name == FACTION_INACTIVE then inactive = true end
-            if (not isCollapsed and char.collapsedHeaders[name]) then
-				-- So the rep isn't collapsed, but we have it as collapsed.
-				-- It was updated somewhere outside of our ecosystem
-				-- This messes with button states for the + and - button
-				-- Proper thing here is to reset our saved copy with the 
-				-- current state
-				char.collapsedHeaders[name] = isCollapsed
-			end
-			isCollapsed = char.collapsedHeaders[name] or isCollapsed
-            factions[#factions+1] = new(
-                "index", i,
-                "name", name,
-                "header", isHeader,
-                "showValue", showValue,
-                "level", level,
-				"standingText", standingText,
-                "collapsed", isCollapsed,
-                "isCapped", isCapped,
-                "inactive", inactive,
-                "textValue", textValue,
-                "FactionID", FactionID
-            )
-            button = buttons[nbEntries]
-            button:SetScript("OnClick", Faction_OnClick)
-            button.rep = factions[#factions]
-            button.faction:SetText( (name == watchedFaction and "|cffe67319" or isHeader and "|cffffffff" or "|cffffd100")..name )
-            if name == watchedFaction then focusedButton = button end
-
-            if showValue then
-                local perc = percent / 100
-
-				-- Colorshift code
-				-- local colorshift = 0
-                -- if level > 9 then level = 9 end
-				-- if config.applyColorShift and FactionID and levelshift[FactionID] then colorshift = levelshift[FactionID] end
-                -- if colorshift > 0 and (level+colorshift) > 9 then colorshift = 9 - level end
-                -- local color = config.blizzColorsInstead and config.blizzardColors[level+colorshift] or config.asciiColors[level+colorshift]
-
-                button.bar:SetVertexColor( color.r, color.g, color.b )
-                button.bar:SetWidth( SIMPLE_BAR_WIDTH * (perc == 0 and 0.0001 or perc) )
-                button.bar:SetTexture(config.barTexture)
-                if config.showRawInstead and not config.showSeparateValues then
-                    button.fs:SetText(button.rep.textValue)
-                else
-                    button.fs:SetText(standingText) 
-                end
-                button.bar:Show() button.fs:Show()
-                if config.showSeparateValues then button.values:SetText(button.rep.textValue) end
-                if config.showRepToGo then button.togo:SetText( button.rep.level == 8 and "-" or max - value ) end
-                if config.showSessionGain then
-                    local gain = balance
-                    button.session:SetText( gain == 0 and "-" or gain)
-                end
-            else
-                button.bar:Hide() button.fs:Hide() button.bg:Hide()
-                if nbEntries > 1 then button.values:Hide() button.togo:Hide() button.session:Hide() end
-            end
-            button.icon:SetTexture(not isHeader and "" or isCollapsed and "Interface\\Buttons\\UI-PlusButton-UP" or "Interface\\Buttons\\UI-MinusButton-UP")
-            button.icon:SetPoint("LEFT", button, "LEFT", isChild and ICON_SIZE + TEXT_OFFSET or 0, 0)
-
-            if nbEntries == 1 then
-                button.togo:SetText("|cffffffffTo Go")
-                button.session:SetText("|cffffffffSession")
-            end
-            itemFactionWidth = button.faction:GetStringWidth() + (isChild and ICON_SIZE + TEXT_OFFSET or 0)
-            if itemFactionWidth > menuFactionWidth then menuFactionWidth = itemFactionWidth end
-            itemValuesWidth = button.values:GetStringWidth()
-            if itemValuesWidth > menuValuesWidth then menuValuesWidth = itemValuesWidth end
-            itemToGoWidth = button.togo:GetStringWidth()
-            if itemToGoWidth > menuToGoWidth then menuToGoWidth = itemToGoWidth end
-            itemSessionWidth = button.session:GetStringWidth()
-            if itemSessionWidth > menuSessionWidth then menuSessionWidth = itemSessionWidth end
-        end --;end
+		end
     end
 
     if config.showHints then
@@ -769,11 +763,11 @@ UpdateBar = function()
         updateBeforeBlizzard = false
         _, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
     else    
-        if watchedIndex then
-			_, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
-        else 
+    --    if watchedIndex then
+	--	_, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
+    --    else 
 			watchedFaction, _, _, _, _, barFaction = GetWatchedFactionInfo()
-        end
+    --    end
     end
 	
 	local info = GetBarMainRepInfo()
