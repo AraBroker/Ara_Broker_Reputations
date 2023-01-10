@@ -11,7 +11,7 @@ local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH
 local f = CreateFrame("Frame", "AraReputation", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 local configMenu, options, ColorPickerChange, ColorPickerCancel, OpenColorPicker, SetOption, textures
 local factions, config, char, UpdateTablet, UpdateBar = {}
-local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFaction
+local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFaction, barFactionHidden
 local sliderValue, hasSlider, c, nbEntries = 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
@@ -716,15 +716,51 @@ local block = LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("|cffffb366A
     OnClick = Block_OnClick
 } )
 
+
+local headersState = {}
+local inactive = {}
+
+local function SaveHeaders()
+	for i = GetNumFactions(), 1, -1 do		-- 1st pass, expand all categories
+		local name, _, _, _, _, _, _, _, isHeader, isCollapsed, _, isWatched, _, factionId = GetFactionInfo(i)
+		if (name == "Inactive") then factionId = "Inactive" end
+
+		if isHeader then
+			if isCollapsed then
+				ExpandFactionHeader(i)
+				headersState[factionId] = true
+			end
+		end
+	end
+end
+
+local function RestoreHeaders()
+	for i = GetNumFactions(), 1, -1 do
+		local name, _, _, _, _, _, _, _, isHeader, isCollapsed, _, isWatched, _, factionId = GetFactionInfo(i)
+		if (name == "Inactive") then factionId = "Inactive" end
+		
+		if isHeader then
+			if headersState[factionId] then
+				CollapseFactionHeader(i)
+			end
+		end
+	end
+	wipe(headersState)
+end
+
 local firstCall = true
+local factionIdtable = {}
 
 UpdateBar = function()
     --local name, _, level, minVal, maxVal, value, FactionID
     if firstCall then
-        for i=1, GetNumFactions() do
-			local name, _, _, _, _, earnedValue, _, _, _, _, _, _, _, factionId = GetFactionInfo(i)
+		SaveHeaders()
+		for i=1, GetNumFactions() do
+			local name, _, _, _, _, earnedValue, _, _, _, _, _, isWatched, _, factionId = GetFactionInfo(i)
+			
 			if (name) then
 			if (factionId) then
+				factionIdtable[name] = factionId
 				local friendID, friendRep = GetFriendshipReputation(factionId)
 				if (IsMajorFaction(factionId)) then
 					local data = GetMajorFactionData(factionId)
@@ -755,19 +791,30 @@ UpdateBar = function()
 			end
 			end
 			if name == watchedFaction then watchedIndex = i end
+			if (isWatched and not watchedFaction) then
+				watchedFaction = name
+				watchedIndex = i
+			end
 		end
+		RestoreHeaders()
         firstCall = false
     end
 
-    if updateBeforeBlizzard then
+	if updateBeforeBlizzard then
         updateBeforeBlizzard = false
         _, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
     else    
-    --    if watchedIndex then
-	--	_, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
-    --    else 
-			watchedFaction, _, _, _, _, barFaction = GetWatchedFactionInfo()
-    --    end
+		-- if watchedIndex then
+			-- _, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
+			-- name, _, level, minVal, maxVal, value, _, _, _, _, _, _, _, FactionID = GetFactionInfo(watchedIndex)	
+		-- else 
+			if barFactionHidden then
+				barFactionHidden = false
+				barFaction       = factionIdtable[watchedFaction]
+			else
+				watchedFaction, _, _, _, _, barFaction = GetWatchedFactionInfo()
+			end
+		-- end
     end
 	
 	local info = GetBarMainRepInfo()
@@ -869,14 +916,28 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
     local switch = not neg and config.autoSwitch and (faction ~= GUILD or not config.exceptGuild)
     if faction == GUILD then faction = GetGuildInfo"player" end
 
-    if switch or #modules>0 then
+    barFactionHidden = false
+	local scannedFactions = false
+	if switch or #modules>0 then
         for i = 1, GetNumFactions() do
+			scannedFactions = true
             if GetFactionInfo(i) == faction then
                 CallModule("OnFactionChange", faction, i)
                 if switch then return SetWatchedFactionIndex(i) else break end
             end
         end
     end
+	if switch and scannedFactions then 
+		-- so we're set to "Auto switch on reputation gain"
+		-- but the faction we just gained with was not found in list
+		-- this happens when the gained faction is collapsed or inactive
+		barFactionHidden = true
+		if factionIdtable[faction] then
+			watchedFaction = faction
+			C_Reputation.SetWatchedFaction(factionIdtable[faction])
+			return UpdateBar()
+		end
+	end
     if faction == watchedFaction then UpdateBar() end
 end
 
@@ -1126,7 +1187,6 @@ function f:ADDON_LOADED(addon)
 		f:RegisterEvent"MAJOR_FACTION_RENOWN_LEVEL_CHANGED"
 	end
 
---  slider = CreateFrame("Slider", nil, f, AraBackdropTemplate)
     slider = CreateFrame("Slider", nil, f, BackdropTemplateMixin and "BackdropTemplate")
     slider:SetWidth(16)
     slider:SetThumbTexture"Interface\\Buttons\\UI-SliderBar-Button-Horizontal"
