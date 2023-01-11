@@ -393,6 +393,11 @@ local function GetBarMainRepInfo()
 	}
 end
 
+local function MajorFactionMaxLevel(factionId)
+	local list = C_MajorFactions.GetRenownLevels(factionId)
+	return list[#list].level
+end
+
 local function IsMaxed(factionId, standingId)
 	-- Would really like a better way of handling this for inactive factions
 	if not factionId then return true end
