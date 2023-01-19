@@ -825,7 +825,7 @@ UpdateBar = function()
 				watchedIndex = i
 			end
 		end
-		RestoreRep.Headers()
+		RestoreRepHeaders()
         firstCall = false
     end
 
