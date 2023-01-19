@@ -298,6 +298,11 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 			balance = balance + (endXp - data.start)
 		end
 	end
+	if (C_Reputation.IsFactionParagon(factionId)) then 
+		local currentValue, threshold, _, _ = C_Reputation.GetFactionParagonInfo(factionId);
+		sessionStart[factionId] = sessionStart[factionId] or currentValue
+		balance = balance + (currentValue - sessionStart[factionId])
+	end
 	return balance
 end
 
@@ -313,7 +318,19 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			local standingText = (RENOWN_LEVEL_LABEL .. data.renownLevel)
 			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(data.textureKit)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
-            return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
+            if not isCapped then 
+				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
+			end
+
+			local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
+			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
+			if config.showParagonCount then
+				standingText = standingText .. " (" .. paragonLevel+1 .. ")"
+			end
+			if hasRewardPending then
+				standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
+			end
+			return mod(currentValue, threshold), threshold, colors[10], standingText, hasRewardPending, session, texture			
 		end
 
 		if (standingId == nil) then
@@ -439,7 +456,7 @@ UpdateTablet = function(self)
             local repColors = config.blizzColorsInsteadBroker and config.blizzardColors or config.asciiColors
             local value, max, color, standing, _, balance, texture = GetFactionValues(standingId, earnedValue, bottomValue, topValue, factionId, repColors)
 			local isCapped = false
-			if not string.find(standing, "Paragon") and not IsFactionInactive(i) then 
+			if not string.find(standing, "Paragon") and not string.find(standing, "Renown") and not IsFactionInactive(i) then 
 				isCapped = IsMaxed(factionId, standingId)				
 			end
 
@@ -506,7 +523,7 @@ UpdateTablet = function(self)
 					end
 					button.bar:Show() button.fs:Show()
 					if config.showSeparateValues then button.values:SetText(button.rep.textValue) end
-					if config.showRepToGo then button.togo:SetText( button.rep.level == 8 and "-" or max - value ) end
+					if config.showRepToGo then button.togo:SetText( isCapped and "-" or max - value ) end
 					if config.showSessionGain then
 						local gain = balance
 						button.session:SetText( gain == 0 and "-" or gain)
@@ -721,11 +738,10 @@ local block = LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("|cffffb366A
     OnClick = Block_OnClick
 } )
 
+local arepHeadersState = {}
+local arepInactive = {}
 
-local headersState = {}
-local inactive = {}
-
-local function SaveHeaders()
+local function SaveRepHeaders()
 	for i = GetNumFactions(), 1, -1 do		-- 1st pass, expand all categories
 		local name, _, _, _, _, _, _, _, isHeader, isCollapsed, _, isWatched, _, factionId = GetFactionInfo(i)
 		if (name == "Inactive") then factionId = "Inactive" end
@@ -733,24 +749,24 @@ local function SaveHeaders()
 		if isHeader then
 			if isCollapsed then
 				ExpandFactionHeader(i)
-				headersState[factionId] = true
+				arepHeadersState[factionId] = true
 			end
 		end
 	end
 end
 
-local function RestoreHeaders()
+local function RestoreRepHeaders()
 	for i = GetNumFactions(), 1, -1 do
 		local name, _, _, _, _, _, _, _, isHeader, isCollapsed, _, isWatched, _, factionId = GetFactionInfo(i)
 		if (name == "Inactive") then factionId = "Inactive" end
 		
 		if isHeader then
-			if headersState[factionId] then
+			if arepHeadersState[factionId] then
 				CollapseFactionHeader(i)
 			end
 		end
 	end
-	wipe(headersState)
+	wipe(arepHeadersState)
 end
 
 local firstCall = true
@@ -759,7 +775,7 @@ local factionIdtable = {}
 UpdateBar = function()
     --local name, _, level, minVal, maxVal, value, FactionID
     if firstCall then
-		SaveHeaders()
+		SaveRepHeaders()
 		for i=1, GetNumFactions() do
 			local name, _, _, _, _, earnedValue, _, _, _, _, _, isWatched, _, factionId = GetFactionInfo(i)
 			
@@ -775,7 +791,15 @@ UpdateBar = function()
 						startLvl = data.renownLevel,
 						[data.renownLevel] = { start = earnedValue, max = data.renownLevelThreshold },
 					}
-					sessionStart[factionId] = earnedValue
+					if not isCapped then
+						sessionStart[factionId] = earnedValue
+					else
+						earnedValue = 0
+						if (C_Reputation.IsFactionParagon(factionId)) then 
+							earnedValue, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
+						end
+						sessionStart[factionId] = earnedValue
+					end
 					lastReps[factionId] = {
 						lvl = data.renownLevel,
 						rep = data.renownReputationEarned,
@@ -801,7 +825,7 @@ UpdateBar = function()
 				watchedIndex = i
 			end
 		end
-		RestoreHeaders()
+		RestoreRep.Headers()
         firstCall = false
     end
 
@@ -838,7 +862,8 @@ UpdateBar = function()
     end
 
 	local isCapped = false
-	if not string.find(standingText, "Paragon") then 
+	if not string.find(standingText, "Paragon") and not string.find(standingText, "Renown") then 
+	--if not string.find(standingText, "Paragon") then 
 		isCapped = IsMaxed(info.factionId, info.standingId)				
 	end
 	--Debugging
