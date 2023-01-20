@@ -456,7 +456,9 @@ UpdateTablet = function(self)
             local repColors = config.blizzColorsInsteadBroker and config.blizzardColors or config.asciiColors
             local value, max, color, standing, _, balance, texture = GetFactionValues(standingId, earnedValue, bottomValue, topValue, factionId, repColors)
 			local isCapped = false
-			if not string.find(standing, "Paragon") and not string.find(standing, "Renown") and not IsFactionInactive(i) then 
+			-- GetFactionLabel(standingId) = Paragon and GetFactionLabel(standingId) = Renown
+			--if not string.find(standing, "Paragon") and not string.find(standing, "Renown") and not IsFactionInactive(i) then 
+			if not isHeader and not C_Reputation.IsFactionParagon(factionId) and not IsFactionInactive(i) then
 				isCapped = IsMaxed(factionId, standingId)				
 			end
 
@@ -744,7 +746,7 @@ local arepInactive = {}
 local function SaveRepHeaders()
 	for i = GetNumFactions(), 1, -1 do		-- 1st pass, expand all categories
 		local name, _, _, _, _, _, _, _, isHeader, isCollapsed, _, isWatched, _, factionId = GetFactionInfo(i)
-		if (name == "Inactive") then factionId = "Inactive" end
+		if (factionId == nil) then factionId = name	end
 
 		if isHeader then
 			if isCollapsed then
@@ -758,7 +760,7 @@ end
 local function RestoreRepHeaders()
 	for i = GetNumFactions(), 1, -1 do
 		local name, _, _, _, _, _, _, _, isHeader, isCollapsed, _, isWatched, _, factionId = GetFactionInfo(i)
-		if (name == "Inactive") then factionId = "Inactive" end
+		if (factionId == nil) then factionId = name	end
 		
 		if isHeader then
 			if arepHeadersState[factionId] then
@@ -862,8 +864,8 @@ UpdateBar = function()
     end
 
 	local isCapped = false
-	if not string.find(standingText, "Paragon") and not string.find(standingText, "Renown") then 
-	--if not string.find(standingText, "Paragon") then 
+	if not C_Reputation.IsFactionParagon(info.factionId) then
+	--if not string.find(standingText, "Paragon") and not string.find(standingText, "Renown") then 
 		isCapped = IsMaxed(info.factionId, info.standingId)				
 	end
 	--Debugging
