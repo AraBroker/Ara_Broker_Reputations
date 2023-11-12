@@ -975,7 +975,9 @@ end
 
 function f:MAJOR_FACTION_RENOWN_LEVEL_CHANGED(factionId, newRenownLevel, oldRenownLevel)
 	local data = GetMajorFactionData(factionId)
-	sessionStartMajorFaction[factionId][newRenownLevel] = { start = 0, max = data.renownLevelThreshold }
+    if (data) then
+        sessionStartMajorFaction[factionId][newRenownLevel] = { start = 0, max = data.renownLevelThreshold }
+    end
 	UpdateBar()
 end
 
