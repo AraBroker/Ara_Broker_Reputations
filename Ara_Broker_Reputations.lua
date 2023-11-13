@@ -316,7 +316,9 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			local isCapped = HasMaximumRenown(factionId)
 			local current = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
 			local standingText = (RENOWN_LEVEL_LABEL .. data.renownLevel)
-			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(data.textureKit)
+            local textureLabel = string.format("%s",data.textureKit)
+            if textureLabel == "Dream" then textureLabel = "denizens" end
+			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(textureLabel)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
             if not isCapped then 
 				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
