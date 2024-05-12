@@ -356,7 +356,11 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			end    
             if not isCapped then 
 				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
-			end
+			else 
+				if factionId == 2593 then
+					print("Plunderstorm is not a Paragon faction, and is capped")
+				end
+            end
 
             --local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
 			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
