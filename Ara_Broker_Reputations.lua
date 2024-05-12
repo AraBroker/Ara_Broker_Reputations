@@ -354,13 +354,6 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			end
 
             --local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
-			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
-			if config.showParagonCount then
-				standingText = standingText .. " (" .. paragonLevel+1 .. ")"
-			end
-			if hasRewardPending then
-				standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
-			end
 			return mod(currentValue, threshold), threshold, colors[10], standingText, hasRewardPending, session, texture			
 		end
 
