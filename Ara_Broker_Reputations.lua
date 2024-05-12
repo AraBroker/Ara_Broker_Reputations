@@ -347,13 +347,25 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(textureLabel)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
             if (C_Reputation.IsFactionParagon(factionId)) then
+				print("FactionID:",factionId)
                 return GetParagonValues(barValue, factionId, colors, texture)
-            end            
+            else
+				if factionId == 2593 then
+					print("Plunderstorm is not a Paragon faction")
+				end
+			end    
             if not isCapped then 
 				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
 			end
 
             --local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
+			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
+			if config.showParagonCount then
+				standingText = standingText .. " (" .. paragonLevel+1 .. ")"
+			end
+			if hasRewardPending then
+				standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
+			end
 			return mod(currentValue, threshold), threshold, colors[10], standingText, hasRewardPending, session, texture			
 		end
 
