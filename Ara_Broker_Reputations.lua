@@ -307,31 +307,6 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 	return balance
 end
 
-local function GetParagonValues(barValue, factionId, colors, texture)
-    local color = colors[9]
-    --local color = colors.paragon
-    local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
-    local paragonLevel = (currentValue - (currentValue % threshold))/threshold
-    local standingText = ""
-    if config.showParagonCount then
-        standingText = GetFactionLabel("paragon") .. " " .. paragonLevel+1
-    else 
-        standingText = GetFactionLabel("paragon") 
-    end
-    if hasRewardPending then
-        if standingText then 
-            standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
-        else
-            standingText = GetFactionLabel("paragon") .. " |A:ParagonReputation_Bag:0:0|a" 
-        end
-    end
-    sessionStart[factionId] = sessionStart[factionId] or currentValue
-    session = currentValue - sessionStart[factionId]
-    --Debugging
-    --print("ParaSession:",session,currentValue,threshold,barValue,sessionStart[factionId])
-    return mod(currentValue, threshold), threshold, color, standingText, hasRewardPending, session
-end
-
 -- @return current, maximun, color, standingText, hasRewardPending, session, texture
 local function GetFactionValues(standingId, barValue, bottomValue, topValue, factionId, colors)
 	local session
@@ -346,41 +321,54 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
             if textureLabel == "Dream" then textureLabel = "denizens" end
 			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(textureLabel)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
-            if (C_Reputation.IsFactionParagon(factionId)) then
-                return GetParagonValues(barValue, factionId, colors, texture)
-            else
-				if factionId == 2593 then
-					print("Plunderstorm is not a Paragon faction")
-				end
-                if isCapped then
-                    if factionId == 2593 then
-                        print("Plunderstorm is not a Paragon faction, and is capped")
-                    end
-                    return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture
-                end
-			end    
             if not isCapped then 
 				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
-            end
-
-            --local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
-			--local paragonLevel = (currentValue - (currentValue % threshold))/threshold
-			--if config.showParagonCount then
-			--	standingText = standingText .. " (" .. paragonLevel+1 .. ")"
-			--end
-			--if hasRewardPending then
-			--	standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
-			--end
-			return mod(currentValue, threshold), threshold, colors[10], standingText, hasRewardPending, session, texture			
+			end
+            if (C_Reputation.IsFactionParagon(factionId)) then
+				local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
+				local paragonLevel = (currentValue - (currentValue % threshold))/threshold
+				if config.showParagonCount then
+					standingText = standingText .. " (" .. paragonLevel+1 .. ")"
+				end
+				if hasRewardPending then
+					standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
+				end
+				return mod(currentValue, threshold), threshold, colors[10], standingText, hasRewardPending, session, texture			
+			else 
+				--Fixes for Plunderstorm
+                --Leave it to Blizzard to break their own rules on how reputations are treated.
+				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
+			end
 		end
 
 		if (standingId == nil) then
 			return "0", "0", "|cFFFF0000", "??? - " .. (factionId .. "?")
 		end
 
-        if (C_Reputation.IsFactionParagon(factionId)) then
-            return GetParagonValues(barValue, factionId, colors)
-        end
+		if (C_Reputation.IsFactionParagon(factionId)) then
+			local color = colors[9]
+            --local color = colors.paragon
+			local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
+			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
+			local standingText = ""
+			if config.showParagonCount then
+				standingText = GetFactionLabel("paragon") .. " " .. paragonLevel+1
+			else 
+				standingText = GetFactionLabel("paragon") 
+			end
+			if hasRewardPending then
+				if standingText then 
+					standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a" 
+				else
+					standingText = GetFactionLabel("paragon") .. " |A:ParagonReputation_Bag:0:0|a" 
+				end
+			end
+			sessionStart[factionId] = sessionStart[factionId] or currentValue
+			session = currentValue - sessionStart[factionId]
+			--Debugging
+			--print("ParaSession:",session,currentValue,threshold,barValue,sessionStart[factionId])
+			return mod(currentValue, threshold), threshold, color, standingText, hasRewardPending, session
+		end
 
 		local friendID, friendRep, _, _, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(factionId)
 		if (friendID) then
