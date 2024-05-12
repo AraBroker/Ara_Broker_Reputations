@@ -1,7 +1,7 @@
 ## Interface: 40400
 
 ## Title: Ara - Broker - Reputations
-## Version: r77
+## Version: r78
 ## Author: Altelulex, VikingKing
 ## Notes: Display watched faction and a customizable tree view of faction bars.
 ## OptionalDeps:
