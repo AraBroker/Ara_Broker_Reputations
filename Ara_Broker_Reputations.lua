@@ -962,26 +962,47 @@ UpdateBar = function()
     end
 end
 
-local fsInc = FACTION_STANDING_INCREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+local fsInc  = FACTION_STANDING_INCREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
 local fsInc2 = FACTION_STANDING_INCREASED_ACH_BONUS:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
 local fsInc3 = FACTION_STANDING_INCREASED_GENERIC:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
-local fsDec = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
+local fsInc6 = FACTION_STANDING_INCREASED_GENERIC:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
+local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
+	print("Got a message:", msg)
     msg = msg:gsub(" %(%+.*%)" ,"")
+	print("Got a message:", msg)
     local faction, value, neg, updated = msg:match(fsInc)
     if not faction then
         faction, value, neg, updated = msg:match(fsInc2)
         if not faction then
             faction = msg:match(fsInc3)
-            if not faction then
-                faction, value = msg:match(fsDec)
-                if not faction then return end
-                neg = true
-            end
+			if not faction then
+				faction = msg:match(fsInc4)
+				if not faction then
+					faction = msg:match(fsInc5)
+					if not faction then
+						faction = msg:match(fsInc6)
+						if not faction then
+							faction, value = msg:match(fsDec)
+							if not faction then
+								faction = msg:match(fsDec2)
+								if not faction then return end
+							end
+							neg = true
+						end
+					end
+				end
+			end
         end
     end
     if tonumber(faction) then faction, value = value, tonumber(faction) else value = tonumber(value) end
+
+	print("Got here")
+	print("MSGScan:",faction, value, neg, updated)
 
     local switch = not neg and config.autoSwitch and (faction ~= GUILD or not config.exceptGuild)
     if faction == GUILD then faction = GetGuildInfo"player" end
