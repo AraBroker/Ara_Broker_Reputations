@@ -972,9 +972,8 @@ local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(
 local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
-	print("Got a message:", msg)
+	--print("Got a message:", msg)
     msg = msg:gsub(" %(%+.*%)" ,"")
-	print("Got a message:", msg)
     local faction, value, neg, updated = msg:match(fsInc)
     if not faction then
         faction, value, neg, updated = msg:match(fsInc2)
@@ -1001,8 +1000,7 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
     end
     if tonumber(faction) then faction, value = value, tonumber(faction) else value = tonumber(value) end
 
-	print("Got here")
-	print("MSGScan:",faction, value, neg, updated)
+	--print("MSGScan:",faction, value, neg, updated)
 
     local switch = not neg and config.autoSwitch and (faction ~= GUILD or not config.exceptGuild)
     if faction == GUILD then faction = GetGuildInfo"player" end
