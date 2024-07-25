@@ -58,6 +58,36 @@ local IsMajorFaction = C_Reputation.IsMajorFaction or nop
 local GetMajorFactionData = C_MajorFactions and C_MajorFactions.GetMajorFactionData and C_MajorFactions.GetMajorFactionData or nop
 local HasMaximumRenown = C_MajorFactions and C_MajorFactions.HasMaximumRenown and C_MajorFactions.HasMaximumRenown or nop
 local GetCurrentRenownLevel = C_MajorFactions and C_MajorFactions.GetCurrentRenownLevel or nop
+local GetNumFactions = GetNumFactions or C_Reputation.GetNumFactions
+local ExpandFactionHeader = ExpandFactionHeader or C_Reputation.ExpandFactionHeader
+local CollapseFactionHeader = CollapseFactionHeader or C_Reputation.CollapseFactionHeader
+local SetWatchedFactionIndex = SetWatchedFactionIndex or C_Reputation.SetWatchedFactionByIndex
+
+local IsFactionInactive = IsFactionInactive or function(...)
+	return not C_Reputation.IsFactionActive(...)
+end
+
+local function unwrapFactionData(data)
+	if not data then return nil end
+	return data.name, data.description, data.reaction, data.currentReactionThreshold, data.nextReactionThreshold,
+	data.currentStanding, data.atWarWith, data.canToggleAtWar, data.isHeader, data.isCollapsed, data.isHeaderWithRep,
+	data.isWatched, data.isChild, data.factionID, data.hasBonusRepGain
+end
+
+--name, description, standingID, barMin, barMax, barValue, atWarWith, canToggleAtWar, isHeader, isCollapsed, hasRep, isWatched, isChild, factionID, hasBonusRepGain
+local GetFactionInfo = GetFactionInfo or function(factionIndex)
+	local data = C_Reputation.GetFactionDataByIndex(factionIndex)
+	return unwrapFactionData(data)
+end
+local GetFactionInfoByID = GetFactionInfoByID or function(factionID)
+	local data = C_Reputation.GetFactionDataByID(factionID)
+	return unwrapFactionData(data)
+end
+
+local GetWatchedFactionInfo = GetWatchedFactionInfo or function()
+	local data = C_Reputation.GetWatchedFactionData()
+	return unwrapFactionData(data)
+end
 
 local sessionStart = {}
 local sessionStartMajorFaction = {}
@@ -71,8 +101,8 @@ local defaultColor = { r=.8, g=.8, b=.8 }
 local backdrop = { bgFile="Interface\\Buttons\\WHITE8X8", edgeFile="Interface\\Tooltips\\UI-Tooltip-Border",
     tile=false, tileSize=0, edgeSize=14, insets = { left=3, right=3, top=3, bottom=3 } }
 
-local GetFactionInfo, FACTION_INACTIVE, GUILD, OTHER =
-    GetFactionInfo, FACTION_INACTIVE, GUILD, OTHER
+local FACTION_INACTIVE, GUILD, OTHER =
+    FACTION_INACTIVE, GUILD, OTHER
 
 local levels = {} for i=1,8 do levels[i]=_G["FACTION_STANDING_LABEL"..i] end
 table.insert(levels,"Paragon") -- Insert Paragon description into table
@@ -264,18 +294,18 @@ end
 
 local GetFriendshipReputation = GetFriendshipReputation
 if not GetFriendshipReputation and C_GossipInfo and C_GossipInfo.GetFriendshipReputation then
-    GetFriendshipReputation = function(factionId)
-        local info = C_GossipInfo.GetFriendshipReputation(factionId)
-        if not info or not info.friendshipFactionID or info.friendshipFactionID == 0 then
-            return
-        end
-        local texture = info.texture
-        if (texture == 0) then
-            texture = nil
-        end
-        --     friendID,                 friendRep,     _, _, friendText, texture, friendTextLevel, friendThreshold,     nextFriendThreshold
-        return info.friendshipFactionID, info.standing, nil, nil, info.text, texture, info.reaction, info.reactionThreshold, info.nextThreshold
-    end
+	GetFriendshipReputation = function(factionId)
+		local info = C_GossipInfo.GetFriendshipReputation(factionId)
+		if not info or not info.friendshipFactionID or info.friendshipFactionID == 0 then
+			return
+		end
+		local texture = info.texture
+		if (texture == 0) then
+			texture = nil
+		end
+		--     friendID,                 friendRep,     _, _, friendText, texture, friendTextLevel, friendThreshold,     nextFriendThreshold
+		return info.friendshipFactionID, info.standing, nil, nil, info.text, texture, info.reaction, info.reactionThreshold, info.nextThreshold
+	end
 end
 GetFriendshipReputation = GetFriendshipReputation or nop
 
