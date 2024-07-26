@@ -965,11 +965,14 @@ end
 local fsInc  = FACTION_STANDING_INCREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
 local fsInc2 = FACTION_STANDING_INCREASED_ACH_BONUS:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
 local fsInc3 = FACTION_STANDING_INCREASED_GENERIC:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
-local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
-local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
-local fsInc6 = FACTION_STANDING_INCREASED_GENERIC:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
 local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
-local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+--Classic clients belch if we try to read these
+if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+	local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+	local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
+	local fsInc6 = FACTION_STANDING_INCREASED_GENERIC_ACCOUNT_WIDE:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
+	local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+end
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
 	--print("Got a message:", msg)
