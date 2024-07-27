@@ -818,7 +818,6 @@ UpdateBar = function()
 		SaveRepHeaders()
 		for i=1, GetNumFactions() do
 			local name, _, _, _, _, earnedValue, _, _, _, _, _, isWatched, _, factionId = GetFactionInfo(i)
-			
 			if (name) then
 			if (factionId) then
 				factionIdtable[name] = factionId
@@ -870,7 +869,7 @@ UpdateBar = function()
     end
 
 	if updateBeforeBlizzard then
-        updateBeforeBlizzard = false
+		updateBeforeBlizzard = false
         _, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetFactionInfo(watchedIndex)
     else    
 		-- if watchedIndex then
@@ -881,7 +880,7 @@ UpdateBar = function()
 				barFactionHidden = false
 				barFaction       = factionIdtable[watchedFaction]
 			else
-				watchedFaction, _, _, _, _, barFaction = GetWatchedFactionInfo()
+				watchedFaction, _, _, _, _, _, _, _, _, _, _, _, _, barFaction = GetWatchedFactionInfo()
 			end
 		-- end
     end
@@ -947,7 +946,7 @@ UpdateBar = function()
             -- move this check to rep function
 			if config.textFactionColor == "none"     then color = defaultColor end
             if config.textFactionColor == "ascii"    then color = config.asciiColors[level] end 
-            if config.textFactionColor == "blizzard" then color = config.blizzardColors[level] end		
+            if config.textFactionColor == "blizzard" then color = config.blizzardColors[level] end	
             tinsert(tt,1, ("|cff%.2x%.2x%.2x%s|r"):format(color.r*255, color.g*255, color.b*255, info.name) )
         end
         block.text = table.concat(tt, " - ")
@@ -966,44 +965,52 @@ local fsInc  = FACTION_STANDING_INCREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(
 local fsInc2 = FACTION_STANDING_INCREASED_ACH_BONUS:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
 local fsInc3 = FACTION_STANDING_INCREASED_GENERIC:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
 local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
---Classic clients belch if we try to read these
-if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
-	local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
-	local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
-	local fsInc6 = FACTION_STANDING_INCREASED_GENERIC_ACCOUNT_WIDE:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
-	local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
-end
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
-	--print("Got a message:", msg)
     msg = msg:gsub(" %(%+.*%)" ,"")
     local faction, value, neg, updated = msg:match(fsInc)
-    if not faction then
-        faction, value, neg, updated = msg:match(fsInc2)
+    if not WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
         if not faction then
-            faction = msg:match(fsInc3)
-			if not faction then
-				faction = msg:match(fsInc4)
-				if not faction then
-					faction = msg:match(fsInc5)
-					if not faction then
-						faction = msg:match(fsInc6)
-						if not faction then
-							faction, value = msg:match(fsDec)
-							if not faction then
-								faction = msg:match(fsDec2)
-								if not faction then return end
-							end
-							neg = true
-						end
-					end
-				end
-			end
+            faction, value, neg, updated = msg:match(fsInc2)
+            if not faction then
+                faction = msg:match(fsInc3)
+                if not faction then
+                    faction, value = msg:match(fsDec)
+                    if not faction then return end
+                    neg = true
+                end
+            end
+        end
+    else
+		local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+		local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
+		local fsInc6 = FACTION_STANDING_INCREASED_GENERIC_ACCOUNT_WIDE:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
+		local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+        if not faction then
+            faction, value, neg, updated = msg:match(fsInc2)
+            if not faction then
+                faction = msg:match(fsInc3)
+                if not faction then
+                    faction = msg:match(fsInc4)
+                    if not faction then
+                        faction = msg:match(fsInc5)
+                        if not faction then
+                            faction = msg:match(fsInc6)
+                            if not faction then
+                                faction, value = msg:match(fsDec)
+                                if not faction then
+                                    faction = msg:match(fsDec2)
+                                    if not faction then return end
+                                end
+                                neg = true
+                            end
+                        end
+                    end
+                end
+            end
         end
     end
     if tonumber(faction) then faction, value = value, tonumber(faction) else value = tonumber(value) end
-
-	--print("MSGScan:",faction, value, neg, updated)
 
     local switch = not neg and config.autoSwitch and (faction ~= GUILD or not config.exceptGuild)
     if faction == GUILD then faction = GetGuildInfo"player" end
