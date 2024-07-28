@@ -982,7 +982,7 @@ local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
     msg = msg:gsub(" %(%+.*%)" ,"")
     local faction, value, neg, updated = msg:match(fsInc)
-    if not WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+    if not (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
         if not faction then
             faction, value, neg, updated = msg:match(fsInc2)
             if not faction then
