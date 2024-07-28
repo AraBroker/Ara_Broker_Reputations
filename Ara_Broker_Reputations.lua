@@ -62,6 +62,7 @@ local GetNumFactions = GetNumFactions or C_Reputation.GetNumFactions
 local ExpandFactionHeader = ExpandFactionHeader or C_Reputation.ExpandFactionHeader
 local CollapseFactionHeader = CollapseFactionHeader or C_Reputation.CollapseFactionHeader
 local SetWatchedFactionIndex = SetWatchedFactionIndex or C_Reputation.SetWatchedFactionByIndex
+local SetWatchedFactionId = SetWatchedFactionId or C_Reputation.SetWatchedFaction or C_Reputation.SetWatchedFactionByID
 
 local IsFactionInactive = IsFactionInactive or function(...)
 	return not C_Reputation.IsFactionActive(...)
@@ -87,6 +88,14 @@ end
 local GetWatchedFactionInfo = GetWatchedFactionInfo or function()
 	local data = C_Reputation.GetWatchedFactionData()
 	return unwrapFactionData(data)
+end
+
+local SetFactionActive = SetFactionActive or function(factionIndex)
+	C_Reputation.SetFactionActive(factionIndex, true)
+end
+	
+local SetFactionInactive = SetFactionInactive or function(factionIndex)
+	C_Reputation.SetFactionActive(factionIndex, false)
 end
 
 local sessionStart = {}
@@ -179,9 +188,9 @@ local function Menu_OnLeave(self)
     if not f:IsMouseOver() then f:Hide() end
 end
 
-local orgSetWatchedFactionIndex = SetWatchedFactionIndex
+local orgSetWatchedFactionIndex = SetWatchedFactionIndex or C_Reputation.SetWatchedFactionByIndex
 function SetWatchedFactionIndex(...)
-    orgSetWatchedFactionIndex(...)
+	orgSetWatchedFactionIndex(...)
     watchedFaction = GetFactionInfo(...)
     watchedIndex = ...
     updateBeforeBlizzard = true
@@ -189,7 +198,7 @@ function SetWatchedFactionIndex(...)
 end
 
 local function Faction_OnClick(self, button)
-    local rep = self.rep
+	local rep = self.rep
     if rep.header and not IsControlKeyDown() then
         if rep.collapsed then ExpandFactionHeader(rep.index) else CollapseFactionHeader(rep.index) end
         char.collapsedHeaders[rep.name] = not rep.collapsed
@@ -432,7 +441,11 @@ local function GetBarMainRepInfo()
 	if (factionId and factionId ~= 0) then
 		name, _, standingId, bottomValue, topValue, barValue, atWarWith = GetFactionInfoByID(factionId)
 	else
-		name, standingId, bottomValue, topValue, barValue, factionId = GetWatchedFactionInfo()
+		if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then
+			name, _, standingId, bottomValue, topValue, barValue, _, _, _, _, _, _, _, factionId = GetWatchedFactionInfo()
+		else
+			name, standingId, bottomValue, topValue, barValue, factionId = GetWatchedFactionInfo()
+		end
 		if (factionId) then
 			atWarWith = select(7, GetFactionInfoByID(factionId))
 		end
@@ -1033,7 +1046,7 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
 		barFactionHidden = true
 		if factionIdtable[faction] then
 			watchedFaction = faction
-			C_Reputation.SetWatchedFaction(factionIdtable[faction])
+            SetWatchedFactionId(factionIdtable[faction])
 			return UpdateBar()
 		end
 	end
