@@ -80,9 +80,19 @@ local GetFactionInfo = GetFactionInfo or function(factionIndex)
 	local data = C_Reputation.GetFactionDataByIndex(factionIndex)
 	return unwrapFactionData(data)
 end
+
 local GetFactionInfoByID = GetFactionInfoByID or function(factionID)
 	local data = C_Reputation.GetFactionDataByID(factionID)
 	return unwrapFactionData(data)
+end
+
+local GetWatchedFactionID = function()
+	if (GetWatchedFactionInfo) then
+		local _, _, _, _, _, factionID = GetWatchedFactionInfo()
+		return factionID
+	end
+	local data = C_Reputation.GetWatchedFactionData()
+	return data.factionID
 end
 
 local GetWatchedFactionInfo = GetWatchedFactionInfo or function()
@@ -301,6 +311,18 @@ local function AddHint(hint)
     button.icon:SetPoint("LEFT", button, "LEFT", -ICON_SIZE-TEXT_OFFSET, 0)
 end
 
+local function MajorFactionTexture(majorFactionData)
+	local kit = majorFactionData.textureKit
+	if (not kit) then return nil end
+    if kit == "Dream" then kit = "denizens" end
+
+	if (majorFactionData.expansionID >= 10) then
+		-- yes, the new ones are in plural "MajorFaction[s]" ¯\_(ツ)_/¯
+		return ([[Interface\Icons\UI_MajorFactions_%s]]):format(kit)
+	end
+	return ([[Interface\Icons\UI_MajorFaction_%s]]):format(kit)
+end
+
 local GetFriendshipReputation = GetFriendshipReputation
 if not GetFriendshipReputation and C_GossipInfo and C_GossipInfo.GetFriendshipReputation then
 	GetFriendshipReputation = function(factionId)
@@ -318,20 +340,23 @@ if not GetFriendshipReputation and C_GossipInfo and C_GossipInfo.GetFriendshipRe
 end
 GetFriendshipReputation = GetFriendshipReputation or nop
 
-local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
+local function GetSessionStartTable(factionId)
 	if (not sessionStartMajorFaction[factionId]) then
 		local data = GetMajorFactionData(factionId)
-		local isCapped = HasMaximumRenown(factionId)
-		local earnedValue = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
 		sessionStartMajorFaction[factionId] = {
 			startLvl = data.renownLevel,
-			[data.renownLevel] = { start = earnedValue, max = data.renownLevelThreshold },
-		}		
+			[data.renownLevel] = { start = 0, max = data.renownLevelThreshold }
+		}
 	end
+	return sessionStartMajorFaction[factionId]
+end
+
+local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
+	local sessionTable = GetSessionStartTable(factionId)
 	local balance = 0
-	local start = sessionStartMajorFaction[factionId].startLvl
+	local start = sessionTable.startLvl
 	for i = start, currentLvl do
-		local data = sessionStartMajorFaction[factionId][i]
+		local data = sessionTable[i]
 		-- we might not have data yet if we just leveled and UPDATE_FACTION run before MAJOR_FACTION_RENOWN_LEVEL_CHANGED
 		if (data) then
 			local endXp = (currentLvl == i) and currentXp or data.max
@@ -342,7 +367,7 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 		local currentValue, threshold, _, _ = C_Reputation.GetFactionParagonInfo(factionId);
 		sessionStart[factionId] = sessionStart[factionId] or currentValue
 		balance = balance + (currentValue - sessionStart[factionId])
-	end
+	end    
 	return balance
 end
 
@@ -356,9 +381,7 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			local isCapped = HasMaximumRenown(factionId)
 			local current = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
 			local standingText = (RENOWN_LEVEL_LABEL .. data.renownLevel)
-            local textureLabel = string.format("%s",data.textureKit)
-            if textureLabel == "Dream" then textureLabel = "denizens" end
-			local texture = data.textureKit and ([[Interface\Icons\UI_MajorFaction_%s]]):format(textureLabel)
+            local texture = MajorFactionTexture(data)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
             if not isCapped then 
 				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
@@ -1066,7 +1089,7 @@ function f:SetupConfigMenu()
     configMenu.displayMode = "MENU"
 
     options = {
-    { text = ("Ara Reputations %s"):format( GetAddOnMetadata(addonName, "Version") ), isTitle = true },
+    { text = ("Ara Reputations %s"):format( C_AddOns.GetAddOnMetadata(addonName, "Version") ), isTitle = true },
     { text = ("WoW Version Detected: %s"):format( wowtextversion ), isTitle = true },
     { text = "Block Display", submenu = {
         { text = "ASCII Bar", radio = "blockDisplay", val = "ascii", submenu = {
