@@ -55,6 +55,7 @@ table.insert(defaultConfig.blizzardColors,{ r= 0,   g= .6,  b= .1  })
 table.insert(defaultConfig.blizzardColors,{ r= 0,  g= .75,  b= .94 })
 
 local IsMajorFaction = C_Reputation.IsMajorFaction or nop
+local IsFactionParagon = C_Reputation.IsFactionParagon or nop
 local GetMajorFactionData = C_MajorFactions and C_MajorFactions.GetMajorFactionData and C_MajorFactions.GetMajorFactionData or nop
 local HasMaximumRenown = C_MajorFactions and C_MajorFactions.HasMaximumRenown and C_MajorFactions.HasMaximumRenown or nop
 local GetCurrentRenownLevel = C_MajorFactions and C_MajorFactions.GetCurrentRenownLevel or nop
@@ -363,7 +364,7 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 			balance = balance + (endXp - data.start)
 		end
 	end
-	if (C_Reputation.IsFactionParagon(factionId)) then 
+	if (IsFactionParagon(factionId)) then 
 		local currentValue, threshold, _, _ = C_Reputation.GetFactionParagonInfo(factionId);
 		sessionStart[factionId] = sessionStart[factionId] or currentValue
 		balance = balance + (currentValue - sessionStart[factionId])
@@ -386,7 +387,7 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
             if not isCapped then 
 				return current, data.renownLevelThreshold, colors[10], standingText, nil, session, texture            
 			end
-            if (C_Reputation.IsFactionParagon(factionId)) then
+            if (IsFactionParagon(factionId)) then
 				local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
 				local paragonLevel = (currentValue - (currentValue % threshold))/threshold
 				if config.showParagonCount then
@@ -407,9 +408,9 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			return "0", "0", "|cFFFF0000", "??? - " .. (factionId .. "?")
 		end
 
-		if (C_Reputation.IsFactionParagon(factionId)) then
+		if (IsFactionParagon(factionId)) then
 			local color = colors[9]
-            --local color = colors.paragon
+			--local color = colors.paragon
 			local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
 			local paragonLevel = (currentValue - (currentValue % threshold))/threshold
 			local standingText = ""
@@ -532,7 +533,7 @@ UpdateTablet = function(self)
 			local isCapped = false
 			-- GetFactionLabel(standingId) = Paragon and GetFactionLabel(standingId) = Renown
 			--if not string.find(standing, "Paragon") and not string.find(standing, "Renown") and not IsFactionInactive(i) then 
-			if not isHeader and not C_Reputation.IsFactionParagon(factionId) and not IsFactionInactive(i) then
+			if not isHeader and not IsFactionParagon(factionId) and not IsFactionInactive(i) then
 				isCapped = IsMaxed(factionId, standingId)				
 			end
 
@@ -870,7 +871,7 @@ UpdateBar = function()
 						sessionStart[factionId] = earnedValue
 					else
 						earnedValue = 0
-						if (C_Reputation.IsFactionParagon(factionId)) then 
+						if (IsFactionParagon(factionId)) then 
 							earnedValue, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
 						end
 						sessionStart[factionId] = earnedValue
@@ -880,13 +881,13 @@ UpdateBar = function()
 						rep = data.renownReputationEarned,
 					}
 				elseif (friendID) then
-					if (C_Reputation.IsFactionParagon(factionId)) then 
+					if (IsFactionParagon(factionId)) then 
 						friendRep, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
 					end
 					sessionStart[factionId] = friendRep
 					lastReps[factionId] = friendRep
 				elseif name then
-					if (C_Reputation.IsFactionParagon(factionId)) then 
+					if (IsFactionParagon(factionId)) then 
 						earnedValue, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
 					end
 					sessionStart[factionId] = earnedValue
@@ -937,7 +938,7 @@ UpdateBar = function()
     end
 
 	local isCapped = false
-	if not C_Reputation.IsFactionParagon(info.factionId) then
+	if not IsFactionParagon(info.factionId) then
 	--if not string.find(standingText, "Paragon") and not string.find(standingText, "Renown") then 
 		isCapped = IsMaxed(info.factionId, info.standingId)				
 	end
