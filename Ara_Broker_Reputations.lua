@@ -381,7 +381,7 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			local data = GetMajorFactionData(factionId)
 			local isCapped = HasMaximumRenown(factionId)
 			local current = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
-			local standingText = (RENOWN_LEVEL_LABEL .. data.renownLevel)
+			local standingText = (RENOWN_LEVEL_LABEL:format(data.renownLevel))
             local texture = MajorFactionTexture(data)
 			session = GetBalanceForMajorFaction(factionId, current, data.renownLevel)
             if not isCapped then 
@@ -1080,6 +1080,7 @@ end
 function f:MAJOR_FACTION_RENOWN_LEVEL_CHANGED(factionId, newRenownLevel, oldRenownLevel)
 	if (not sessionStartMajorFaction[factionId]) then
 		local data = GetMajorFactionData(factionId)
+        if not data then return end
 		sessionStartMajorFaction[factionId] = {
 			startLvl = data.renownLevel,
 			[data.renownLevel] = { start = 0, max = data.renownLevelThreshold }
