@@ -1,7 +1,7 @@
-## Interface: 110100
+## Interface: 110107, 110200
 
 ## Title: Ara - Broker - Reputations
-## Version: r87
+## Version: r88
 ## Author: Altelulex, VikingKing
 ## Notes: Display watched faction and a customizable tree view of faction bars.
 ## OptionalDeps:

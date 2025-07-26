@@ -4,6 +4,7 @@ if WOW_PROJECT_ID == WOW_PROJECT_CLASSIC then wowtextversion = "Classic" end
 if WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then wowtextversion = "TBC Classic" end
 if WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC then wowtextversion = "Wrath Classic" end
 if WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC then wowtextversion = "Cataclysm Classic" end
+if WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC then wowtextversion = "Pandaria Classic" end
 if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then wowtextversion = "Retail" end 
 
 local addonName = ...
