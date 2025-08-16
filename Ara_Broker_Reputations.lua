@@ -762,25 +762,60 @@ local function SetSkin()
     if config.useTipTacSkin and TipTac then
         tiptacBG = tiptacBG or { tile=false, insets={} }
         local cfg = TipTac_Config
-        tiptacBG.bgFile = cfg.tipBackdropBG
-        tiptacBG.edgeFile = cfg.tipBackdropEdge
-        tiptacBG.edgeSize = cfg.backdropEdgeSize
-        tiptacBG.insets.left = cfg.backdropInsets
-        tiptacBG.insets.right = cfg.backdropInsets
-        tiptacBG.insets.top = cfg.backdropInsets
-        tiptacBG.insets.bottom = cfg.backdropInsets
+		local cname = GetUnitName("player", false)
+		if cfg.profiles[cname] == nil then
+			cname = "Default"
+		end
+		if cfg.profiles[cname].tipBackdropBG == nil then
+			tiptacBG.bgFile = "Interface\\Buttons\\WHITE8X8"
+		else
+			tiptacBG.bgFile = cfg.profiles[cname].tipBackdropBG
+		end
+		if cfg.profiles[cname].tipBackdropEdge == nil then
+			tiptacBG.edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border"
+		else
+			tiptacBG.edgeFile = cfg.profiles[cname].tipBackdropEdge
+		end
+		if cfg.profiles[cname].backdropEdgeSize == nil then
+			tiptacBG.edgeSize = 14
+		else
+			tiptacBG.edgeSize = cfg.profiles[cname].backdropEdgeSize
+		end
+		if cfg.profiles[cname].backdropInsets == nil then
+			tiptacBG.insets.left = 2.5
+			tiptacBG.insets.right = 2.5
+			tiptacBG.insets.top = 2.5
+			tiptacBG.insets.bottom = 2.5
+		else
+			tiptacBG.insets.left = cfg.profiles[cname].backdropInsets
+			tiptacBG.insets.right = cfg.profiles[cname].backdropInsets
+			tiptacBG.insets.top = cfg.profiles[cname].backdropInsets
+			tiptacBG.insets.bottom = cfg.profiles[cname].backdropInsets
+		end
         f:SetBackdrop(tiptacBG)
-        f:SetBackdropColor(unpack(cfg.tipColor))
-        f:SetBackdropBorderColor(unpack(cfg.tipBorderColor))
-        if not cfg.gradientTip then
+        if cfg.profiles[cname].tipColor == nil then
+			f:SetBackdropColor( .1, .1, .2, 1 )
+		else
+			f:SetBackdropColor(unpack(cfg.profiles[cname].tipColor))
+		end
+        if cfg.profiles[cname].tipBorderColor == nil then
+			f:SetBackdropBorderColor( .3, .3, .4, 1 )
+		else
+			f:SetBackdropBorderColor(unpack(cfg.profiles[cname].tipBorderColor))
+		end
+        if not cfg.profiles[cname].gradientTip then
             return tiptacGradient and tiptacGradient:Hide()
         elseif not tiptacGradient then
             tiptacGradient = f:CreateTexture()
             tiptacGradient:SetTexture([[Interface\AddOns\Ara_Broker_Reputations\media\gradient]])
         end
-        tiptacGradient:SetVertexColor(unpack(cfg.gradientColor))
-        tiptacGradient:SetPoint("TOPLEFT",cfg.backdropInsets,-cfg.backdropInsets)
-        tiptacGradient:SetPoint("BOTTOMRIGHT",f,"TOPRIGHT",-cfg.backdropInsets,-36)
+		if cfg.profiles[cname].gradientColor == nil then
+			tiptacGradient:SetVertexColor( .8, .8, .8, .15 )
+		else
+			tiptacGradient:SetVertexColor(unpack(cfg.profiles[cname].gradientColor))
+		end
+        tiptacGradient:SetPoint("TOPLEFT",cfg.profiles[cname].backdropInsets,-cfg.profiles[cname].backdropInsets)
+        tiptacGradient:SetPoint("BOTTOMRIGHT",f,"TOPRIGHT",-cfg.profiles[cname].backdropInsets,-36)
         tiptacGradient:Show()
     elseif Skinner then
         Skinner:applySkin(f)
