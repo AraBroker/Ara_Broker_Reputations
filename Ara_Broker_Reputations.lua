@@ -759,7 +759,17 @@ end
 
 
 local function SetSkin()
+	tiptacVerCheck = false
     if config.useTipTacSkin and TipTac then
+		tiptacVer = C_AddOns.GetAddOnMetadata("TipTac","Version")
+		-- print("TipTac version is: ",tiptacVer)
+		if tiptacVer >= "25.08.13" then
+			tiptacVerCheck = true
+		else
+			print("\124cffFF0000Ara_Broker_Reputations: Your installed copy of TipTac is out of date. Please update to version 25.08.13 or newer.\124r")
+		end
+	end
+    if config.useTipTacSkin and TipTac and tiptacVerCheck then
         tiptacBG = tiptacBG or { tile=false, insets={} }
         local cfg = TipTac_Config
 		local cname = GetUnitName("player", false)
@@ -1025,7 +1035,7 @@ UpdateBar = function()
         block.text = table.concat(tt, " - ")
         wipe(tt)
     elseif config.blockDisplay == "ascii" then
-        local steps = perc * ASCII_LENGTH
+        local steps = (perc/100) * ASCII_LENGTH
         if config.asciiBar == "singleColor" then c1 = defaultColor end
         --need to figure this out
         block.text = ("|cff%.2x%.2x%.2x%s|cff%.2x%.2x%.2x%s"):format(
