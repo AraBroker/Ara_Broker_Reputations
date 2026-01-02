@@ -355,6 +355,9 @@ end
 
 local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 	local sessionTable = GetSessionStartTable(factionId)
+	if not sessionTable or not sessionTable.startLvl then
+        return 0
+    end
 	local balance = 0
 	local start = sessionTable.startLvl
 	for i = start, currentLvl do
@@ -367,8 +370,10 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 	end
 	if (IsFactionParagon(factionId)) then 
 		local currentValue, threshold, _, _ = C_Reputation.GetFactionParagonInfo(factionId);
-		sessionStart[factionId] = sessionStart[factionId] or currentValue
-		balance = balance + (currentValue - sessionStart[factionId])
+		if currentValue then
+			sessionStart[factionId] = sessionStart[factionId] or currentValue
+			balance = balance + (currentValue - sessionStart[factionId])
+		end
 	end    
 	return balance
 end
@@ -538,10 +543,11 @@ UpdateTablet = function(self)
 				isCapped = IsMaxed(factionId, standingId)				
 			end
 
-            local percent = math.floor((value) * 100 / (max))
-            if (max == 0) then
-                percent = 100
-            end    			
+            if max and max > 0 then
+				percent = math.floor((value or 0) * 100 / max)
+			else
+				percent = 100
+			end
 			local standingText = standing
             local level = standingId
 
