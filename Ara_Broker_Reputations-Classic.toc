@@ -1,4 +1,4 @@
-## Interface: 11507
+## Interface: 11508
 
 ## Title: Ara - Broker - Reputations
 ## Version: r91
@@ -10,5 +10,6 @@
 libs\LibStub.lua
 libs\CallbackHandler-1.0.lua
 libs\LibDataBroker-1.1.lua
+
 
 Ara_Broker_Reputations.lua
