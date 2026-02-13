@@ -9,12 +9,12 @@ if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then wowtextversion = "Retail" end
 
 local addonName = ...
 local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH, FONT_SIZE, MAX_ENTRIES =
-       14,          13,     10,      3,            110,             30,          11
+       14,          13,     10,      3,            110,             30,          11,         10
 local f = CreateFrame("Frame", "AraReputation", UIParent, BackdropTemplateMixin and "BackdropTemplate")
 local configMenu, options, ColorPickerChange, ColorPickerCancel, OpenColorPicker, SetOption, textures
-local factions, config, char, UpdateTablet, UpdateBar = {}
+local factions, config, char, UpdateTablet, UpdateBar = {}, nil, nil, nil, nil
 local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFaction, barFactionHidden
-local sliderValue, hasSlider, c, nbEntries = 0
+local sliderValue, hasSlider, c, nbEntries = 0, false, {}, 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
 local defaultConfig = {
@@ -347,7 +347,10 @@ local function GetSessionStartTable(factionId)
 		local data = GetMajorFactionData(factionId)
 		sessionStartMajorFaction[factionId] = {
 			startLvl = data.renownLevel,
-			[data.renownLevel] = { start = 0, max = data.renownLevelThreshold }
+			[data.renownLevel] = { 
+				--start = 0, 
+				start = data.renownReputationEarned or 0,
+				max = data.renownLevelThreshold }
 		}
 	end
 	return sessionStartMajorFaction[factionId]
@@ -372,7 +375,13 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 		local currentValue, threshold, _, _ = C_Reputation.GetFactionParagonInfo(factionId);
 		if currentValue then
 			sessionStart[factionId] = sessionStart[factionId] or currentValue
-			balance = balance + (currentValue - sessionStart[factionId])
+			local paragonBalance = currentValue - sessionStart[factionId]
+			-- Wenn negativ, sessionStart zurücksetzen
+			if paragonBalance < 0 then
+				sessionStart[factionId] = currentValue
+				paragonBalance = 0
+			end
+			balance = balance + paragonBalance
 		end
 	end    
 	return balance
@@ -414,7 +423,21 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			return "0", "0", "|cFFFF0000", "??? - " .. (factionId .. "?")
 		end
 
-		if (IsFactionParagon(factionId)) then
+		local friendID, friendRep, _, _, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(factionId)
+		if (friendID) then
+			local standingText = friendTextLevel
+			local color = colors[standingId] or colors[5]
+			local maximun, current = 1, 1
+			if (nextFriendThreshold) then
+				maximun, current = nextFriendThreshold - friendThreshold, friendRep - friendThreshold
+			end
+			friendRep = friendRep or 0
+			-- Für Friendship-Reputationen immer Session auf 0 nach Reload
+			session = 0
+			return current, maximun, color, standingText, nil, session, friendTexture
+		end
+
+		if (IsFactionParagon(factionId) and standingId == 8) then
 			local color = colors[9]
 			--local color = colors.paragon
 			local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId);
@@ -438,22 +461,15 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 			--print("ParaSession:",session,currentValue,threshold,barValue,sessionStart[factionId])
 			return mod(currentValue, threshold), threshold, color, standingText, hasRewardPending, session
 		end
-
-		local friendID, friendRep, _, _, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(factionId)
-		if (friendID) then
-			local standingText = friendTextLevel
-			local color = colors[standingId] or colors[5]
-			local maximun, current = 1, 1
-			if (nextFriendThreshold) then
-				maximun, current = nextFriendThreshold - friendThreshold, friendRep - friendThreshold
-			end
-			sessionStart[factionId] = sessionStart[factionId] or friendRep
-			session = friendRep - sessionStart[factionId]
-			return current, maximun, color, standingText, nil, session, friendTexture
+		
+		-- Check if this is a Friendship Reputation before initializing sessionStart
+		local friendID = select(1, GetFriendshipReputation(factionId))
+		if not friendID then
+			sessionStart[factionId] = sessionStart[factionId] or barValue
+			session = barValue - sessionStart[factionId]
+		else
+			session = 0
 		end
-
-		sessionStart[factionId] = sessionStart[factionId] or barValue
-		session = barValue - sessionStart[factionId]
 	else 
 		session = 0
 	end
@@ -480,12 +496,25 @@ local function GetBarMainRepInfo()
 			atWarWith = select(7, GetFactionInfoByID(factionId))
 		end
 	end
+	-- Apply same barValueToPass logic as in UpdateTablet for consistency
+	local barValueToPass = barValue
+	local friendID, friendRep = GetFriendshipReputation(factionId)
+	if friendID then
+		barValueToPass = friendRep or 0
+	elseif IsMajorFaction(factionId) then
+		local data = GetMajorFactionData(factionId)
+		local isCapped = HasMaximumRenown(factionId)
+		barValueToPass = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
+		if isCapped and IsFactionParagon(factionId) then
+			barValueToPass = select(1, C_Reputation.GetFactionParagonInfo(factionId))
+		end
+	end
 	return {
 		name = name,
 		standingId = standingId,
 		bottomValue = bottomValue,
 		topValue = topValue,
-		barValue = barValue,
+		barValue = barValueToPass,
 		factionId = factionId,
 		atWarWith = atWarWith
 	}
@@ -535,11 +564,25 @@ UpdateTablet = function(self)
 		
 		if name then
             local repColors = config.blizzColorsInsteadBroker and config.blizzardColors or config.asciiColors
-            local value, max, color, standing, _, balance, texture = GetFactionValues(standingId, earnedValue, bottomValue, topValue, factionId, repColors)
+            -- Für Friendship Reputationen: Korrekten Wert verwenden
+            local barValueToPass = earnedValue
+            local friendID, friendRep = GetFriendshipReputation(factionId)
+            if friendID then
+                barValueToPass = friendRep or 0
+            elseif IsMajorFaction(factionId) then
+                -- Major Faction: Korrekten Wert für Paragon verwenden
+                local data = GetMajorFactionData(factionId)
+                local isCapped = HasMaximumRenown(factionId)
+                barValueToPass = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
+                if isCapped and IsFactionParagon(factionId) then
+                    barValueToPass, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
+                end
+            end
+            local value, max, color, standing, _, balance, texture = GetFactionValues(standingId, barValueToPass, bottomValue, topValue, factionId, repColors)
 			local isCapped = false
 			-- GetFactionLabel(standingId) = Paragon and GetFactionLabel(standingId) = Renown
 			--if not string.find(standing, "Paragon") and not string.find(standing, "Renown") and not IsFactionInactive(i) then 
-			if not isHeader and not IsFactionParagon(factionId) and not IsFactionInactive(i) then
+			if not isHeader and not IsFactionParagon(factionId) and not IsFactionInactive(i) and not friendID then
 				isCapped = IsMaxed(factionId, standingId)				
 			end
 
@@ -579,7 +622,7 @@ UpdateTablet = function(self)
 					"isCapped", isCapped,
 					"inactive", inactive,
 					"textValue", textValue,
-					"FactionID", FactionID
+					"factionID", factionID
 				)
 				button = buttons[nbEntries]
 				button:SetScript("OnClick", Faction_OnClick)
@@ -911,38 +954,40 @@ UpdateBar = function()
 			if (factionId) then
 				factionIdtable[name] = factionId
 				local friendID, friendRep = GetFriendshipReputation(factionId)
-				if (IsMajorFaction(factionId)) then
+				
+				-- Friendship Reputation hat Vorrang!
+				if (friendID) then
+					if (IsFactionParagon(factionId)) then 
+						friendRep, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
+					end
+					lastReps[factionId] = friendRep or 0
+				elseif (IsMajorFaction(factionId)) then
 					local data = GetMajorFactionData(factionId)
 					local isCapped = HasMaximumRenown(factionId)
 					earnedValue = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
+					if factionId == 2688 then
+						print(data.renownReputationEarned, earnedValue, data.renownLevelThreshold)
+					end
 					sessionStartMajorFaction[factionId] = {
 						startLvl = data.renownLevel,
 						[data.renownLevel] = { start = earnedValue, max = data.renownLevelThreshold },
 					}
 					if not isCapped then
-						sessionStart[factionId] = earnedValue
+						-- Don't initialize sessionStart here
 					else
 						earnedValue = 0
 						if (IsFactionParagon(factionId)) then 
 							earnedValue, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
 						end
-						sessionStart[factionId] = earnedValue
 					end
 					lastReps[factionId] = {
 						lvl = data.renownLevel,
 						rep = data.renownReputationEarned,
 					}
-				elseif (friendID) then
-					if (IsFactionParagon(factionId)) then 
-						friendRep, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
-					end
-					sessionStart[factionId] = friendRep
-					lastReps[factionId] = friendRep
-				elseif name then
+				else
 					if (IsFactionParagon(factionId)) then 
 						earnedValue, _, _, _ = C_Reputation.GetFactionParagonInfo(factionId)
 					end
-					sessionStart[factionId] = earnedValue
 					lastReps[factionId] = earnedValue
 				end
 			end
