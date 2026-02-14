@@ -7,6 +7,8 @@
 ## OptionalDeps:
 ## SavedVariables: AraReputationsDB
 
+## X-Curse-Project-ID: 387453
+
 libs\LibStub.lua
 libs\CallbackHandler-1.0.lua
 libs\LibDataBroker-1.1.lua

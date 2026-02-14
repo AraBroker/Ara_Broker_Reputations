@@ -129,15 +129,15 @@ local levels = {} for i=1,8 do levels[i]=_G["FACTION_STANDING_LABEL"..i] end
 table.insert(levels,"Paragon") -- Insert Paragon description into table
 table.insert(levels,"Renown")  -- Insert Renown description into table
 
-local SEX = UnitSex("player")
+local SEX = UnitSex("player") or 1
 local function GetFactionLabel(standingId)
-	if standingId == "paragon" then
-		return "Paragon"
-	end
-	if (standingId == "renown") then
-		return "Renown"
-	end
-	return GetText("FACTION_STANDING_LABEL" .. standingId, SEX)
+    if standingId == "paragon" then
+        return "Paragon"
+    end
+    if (standingId == "renown") then
+        return "Renown"
+    end
+    return GetText("FACTION_STANDING_LABEL" .. standingId, SEX, nil)
 end
 
 local colors = { "8b0000", "ff1919", "ff8c00", "dddddd", "ffff00", "19e619", "4169e1", "9932cc", "67009a" }
@@ -1186,9 +1186,12 @@ end
 function f:SetupConfigMenu()
     configMenu = CreateFrame("Frame", "AraReputationConfigMenu")
     configMenu.displayMode = "MENU"
-
+    local addonversion = C_AddOns.GetAddOnMetadata(addonName, "Version")
+    if addonversion == "@project-version@" then
+        addonversion = "r94"
+    end
     options = {
-    { text = ("Ara Reputations %s"):format( C_AddOns.GetAddOnMetadata(addonName, "Version") ), isTitle = true },
+    { text = ("Ara Reputations %s"):format( addonversion ), isTitle = true },
     { text = ("WoW Version Detected: %s"):format( wowtextversion ), isTitle = true },
     { text = "Block Display", submenu = {
         { text = "ASCII Bar", radio = "blockDisplay", val = "ascii", submenu = {

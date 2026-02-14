@@ -1,4 +1,4 @@
-## Interface: 50502, 50503
+## Interface: 50503
 
 ## Title: Ara - Broker - Reputations
 ## Version: @project-version@
@@ -6,6 +6,8 @@
 ## Notes: Display watched faction and a customizable tree view of faction bars.
 ## OptionalDeps:
 ## SavedVariables: AraReputationsDB
+
+## X-Curse-Project-ID: 387453
 
 libs\LibStub.lua
 libs\CallbackHandler-1.0.lua
