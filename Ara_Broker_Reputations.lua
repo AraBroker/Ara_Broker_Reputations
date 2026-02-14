@@ -498,10 +498,10 @@ local function GetBarMainRepInfo()
 	end
 	-- Apply same barValueToPass logic as in UpdateTablet for consistency
 	local barValueToPass = barValue
-	local friendID, friendRep = GetFriendshipReputation(factionId)
+	local friendID, friendRep = factionId and GetFriendshipReputation(factionId) or nil
 	if friendID then
 		barValueToPass = friendRep or 0
-	elseif IsMajorFaction(factionId) then
+	elseif factionId and IsMajorFaction(factionId) then
 		local data = GetMajorFactionData(factionId)
 		local isCapped = HasMaximumRenown(factionId)
 		barValueToPass = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
@@ -965,9 +965,6 @@ UpdateBar = function()
 					local data = GetMajorFactionData(factionId)
 					local isCapped = HasMaximumRenown(factionId)
 					earnedValue = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
-					if factionId == 2688 then
-						print(data.renownReputationEarned, earnedValue, data.renownLevelThreshold)
-					end
 					sessionStartMajorFaction[factionId] = {
 						startLvl = data.renownLevel,
 						[data.renownLevel] = { start = earnedValue, max = data.renownLevelThreshold },
