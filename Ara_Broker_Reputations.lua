@@ -1260,7 +1260,7 @@ function f:SetupConfigMenu()
         { text = "100%", radio = "scale", val = 1.0 },
         { text = "110%", radio = "scale", val = 1.1 },
         { text = "120%", radio = "scale", val = 1.2 },
-        { text = "Custom...", radio="scaleX", func=function() StaticPopup_Show"SET_ABR_SCALE" end } } },
+        { text = "Custom...", radio="scaleX", func=function() StaticPopup_Show"SET_ABR_SCALE" end }, } },
     { text = "Auto switch on reputation gain", check = "autoSwitch", submenu = {
         { text = "Except for guild reputation", check = "exceptGuild" } } },
     { text = "Apply Color Shift for special Factions", check = "applyColorShift" }, 
@@ -1302,7 +1302,8 @@ function f:SetupConfigMenu()
     textures = { "Armory", "BantoBar", "Blizzard", "Glaze", "LiteStep", "Minimalist", "Otravi", "Smooth", "Smooth v2" }
 
     f.SetCustomScale = function(self,dialog)
-        local val = tonumber( self.editBox:GetText():match"(%d+)" )
+        if not dialog or not dialog.editBox then return end
+        local val = tonumber( dialog.editBox:GetText():match"(%d+)" )
         if not val or val<70 or val>200 then
             baseScript = BasicScriptErrors:GetScript"OnHide"
             BasicScriptErrors:SetScript("OnHide",Error_OnHide)
@@ -1319,7 +1320,7 @@ function f:SetupConfigMenu()
         hasEditBox = 1,
         maxLetters = 4,
         OnAccept = AraReputation.SetCustomScale,
-        OnShow = function(self) CloseDropDownMenus() self.editBox:SetText(config.scale*100) self.editBox:SetFocus() end,
+        OnShow = function(self) CloseDropDownMenus() if self.editBox then self.editBox:SetText(config.scale*100) self.editBox:SetFocus() end end,
         OnHide = ChatEdit_FocusActiveWindow,
         EditBoxOnEnterPressed = function(self) local p=self:GetParent() AraReputation:SetCustomScale(p) p:Hide() end,
         EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
