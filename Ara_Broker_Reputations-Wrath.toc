@@ -4,7 +4,7 @@
 ## Version: @project-version@
 ## Author: Altelulex, VikingKing
 ## Notes: Display watched faction and a customizable tree view of faction bars.
-## OptionalDeps:
+
 ## SavedVariables: AraReputationsDB
 
 ## X-Curse-Project-ID: 387453
