@@ -1301,9 +1301,14 @@ function f:SetupConfigMenu()
 
     textures = { "Armory", "BantoBar", "Blizzard", "Glaze", "LiteStep", "Minimalist", "Otravi", "Smooth", "Smooth v2" }
 
-    f.SetCustomScale = function(self,dialog)
-        if not dialog or not dialog.editBox then return end
-        local val = tonumber( dialog.editBox:GetText():match"(%d+)" )
+    --f.SetCustomScale = function(self,dialog)
+    f.SetCustomScale = function(dialog)
+        --if not dialog or not dialog.editBox then return end
+        local editBox = dialog.editBox or _G[dialog:GetName() .. "EditBox"]
+		if not editBox then
+			return
+		end
+        local val = tonumber( editBox:GetText():match"(%d+)" )
         if not val or val<70 or val>200 then
             baseScript = BasicScriptErrors:GetScript"OnHide"
             BasicScriptErrors:SetScript("OnHide",Error_OnHide)
@@ -1311,6 +1316,7 @@ function f:SetupConfigMenu()
             return BasicScriptErrors:Show()
         end
         config.scale = val/100
+        --print(("Ara Reputations: Tooltip scale set to %i%%."):format(val))
     end
 
     StaticPopupDialogs.SET_ABR_SCALE = {
@@ -1320,9 +1326,17 @@ function f:SetupConfigMenu()
         hasEditBox = 1,
         maxLetters = 4,
         OnAccept = AraReputation.SetCustomScale,
-        OnShow = function(self) CloseDropDownMenus() if self.editBox then self.editBox:SetText(config.scale*100) self.editBox:SetFocus() end end,
+        --OnShow = function(self) CloseDropDownMenus() if self.editBox then self.editBox:SetText(config.scale*100) self.editBox:SetFocus() end end,
+        OnShow = function(self) 
+			CloseDropDownMenus() 
+			local editBox = self.editBox or _G[self:GetName() .. "EditBox"]
+			if editBox then
+				editBox:SetText(config.scale*100) 
+				editBox:SetFocus() 
+			end
+		end,
         OnHide = ChatEdit_FocusActiveWindow,
-        EditBoxOnEnterPressed = function(self) local p=self:GetParent() AraReputation:SetCustomScale(p) p:Hide() end,
+        EditBoxOnEnterPressed = function(self) local p=self:GetParent() AraReputation.SetCustomScale(p) p:Hide() end,
         EditBoxOnEscapePressed = function(self) self:GetParent():Hide() end,
         timeout = 0,
         exclusive = 1,
