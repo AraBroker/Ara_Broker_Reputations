@@ -17,6 +17,7 @@ local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFact
 local sliderValue, hasSlider, c, nbEntries = 0, false, {}, 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
+local addondevversion = "r96"
 local defaultConfig = {
     scale = 1.1,
     blockDisplay = "text",
@@ -1188,7 +1189,7 @@ function f:SetupConfigMenu()
     configMenu.displayMode = "MENU"
     local addonversion = C_AddOns.GetAddOnMetadata(addonName, "Version")
     if addonversion == "@project-version@" then
-        addonversion = "r94"
+        addonversion = addondevversion
     end
     options = {
     { text = ("Ara Reputations %s"):format( addonversion ), isTitle = true },
@@ -1276,15 +1277,47 @@ function f:SetupConfigMenu()
         end
     end
 
-    ColorPickerChange = function() c.r, c.g, c.b = ColorPickerFrame:GetColorRGB() UpdateBar() end
-    ColorPickerCancel = function(prev) c.r, c.g, c.b = unpack(prev) UpdateBar() end
+    local function GetColorPickerRGB()
+        if ColorPickerFrame.GetColorRGB then
+            return ColorPickerFrame:GetColorRGB()
+        end
+        if ColorPickerFrame.Content and ColorPickerFrame.Content.ColorPicker and ColorPickerFrame.Content.ColorPicker.GetColorRGB then
+            return ColorPickerFrame.Content.ColorPicker:GetColorRGB()
+        end
+        return 1, 1, 1
+    end
+
+    ColorPickerChange = function()
+        c.r, c.g, c.b = GetColorPickerRGB()
+        UpdateBar()
+    end
+    ColorPickerCancel = function(prev)
+        if type(prev) == "table" then
+            c.r = prev.r or prev[1] or c.r
+            c.g = prev.g or prev[2] or c.g
+            c.b = prev.b or prev[3] or c.b
+            UpdateBar()
+        end
+    end
     OpenColorPicker = function(self, col, index)
         c = config[col][index]
-        ColorPickerFrame.previousValues = { c.r, c.g, c.b }
-        ColorPickerFrame.func = ColorPickerChange
-        ColorPickerFrame.cancelFunc = ColorPickerCancel
-        ColorPickerFrame:SetColorRGB( c.r, c.g, c.b )
-        ColorPickerFrame:Show()
+        if ColorPickerFrame.SetupColorPickerAndShow then
+            local info = {
+                r = c.r,
+                g = c.g,
+                b = c.b,
+                hasOpacity = false,
+                swatchFunc = ColorPickerChange,
+                cancelFunc = ColorPickerCancel,
+            }
+            ColorPickerFrame:SetupColorPickerAndShow(info)
+        else
+            ColorPickerFrame.previousValues = { c.r, c.g, c.b }
+            ColorPickerFrame.func = ColorPickerChange
+            ColorPickerFrame.cancelFunc = ColorPickerCancel
+            ColorPickerFrame:SetColorRGB(c.r, c.g, c.b)
+            ColorPickerFrame:Show()
+        end
     end
 
     SetOption = function(bt, var, val, checked)
