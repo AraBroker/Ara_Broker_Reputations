@@ -267,7 +267,7 @@ local buttons = setmetatable( {}, { __index = function(table, index)
 
     button.fs = button:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
     button.fs:SetFont( baseFont, FONT_SIZE )
-    button.fs:SetWidth(SIMPLE_BAR_WIDTH)
+    button.fs:SetWidth(SIMPLE_BAR_WIDTH+10)
     button.fs:SetJustifyH"CENTER"
 
     button.bar = button:CreateTexture(nil, "OVERLAY") --, button)
