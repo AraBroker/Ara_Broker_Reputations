@@ -90,12 +90,14 @@ local GetFactionInfoByID = GetFactionInfoByID or function(factionID)
 end
 
 local GetWatchedFactionID = function()
-	if (GetWatchedFactionInfo) then
-		local _, _, _, _, _, factionID = GetWatchedFactionInfo()
-		return factionID
-	end
-	local data = C_Reputation.GetWatchedFactionData()
-	return data.factionID
+    if (GetWatchedFactionInfo) then
+        local _, _, _, _, _, factionID = GetWatchedFactionInfo()
+        return factionID
+    end
+    local data = C_Reputation.GetWatchedFactionData()
+    if data then
+        return data.factionID
+    end
 end
 
 local GetWatchedFactionInfo = GetWatchedFactionInfo or function()
@@ -426,6 +428,23 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 
 		local friendID, friendRep, _, _, _, friendTexture, friendTextLevel, friendThreshold, nextFriendThreshold = GetFriendshipReputation(factionId)
 		if (friendID) then
+            if (IsFactionParagon(factionId)) then
+                local color = colors[9]
+                local currentValue, threshold, _, hasRewardPending = C_Reputation.GetFactionParagonInfo(factionId)
+                local paragonLevel = (currentValue - (currentValue % threshold))/threshold
+                local standingText
+                if config.showParagonCount then
+                    standingText = GetFactionLabel("paragon") .. " " .. paragonLevel+1
+                else
+                    standingText = GetFactionLabel("paragon")
+                end
+                if hasRewardPending then
+                    standingText = standingText .. " |A:ParagonReputation_Bag:0:0|a"
+                end
+                sessionStart[factionId] = sessionStart[factionId] or currentValue
+                session = currentValue - sessionStart[factionId]
+                return mod(currentValue, threshold), threshold, color, standingText, hasRewardPending, session, friendTexture
+            end
 			local standingText = friendTextLevel
 			local color = colors[standingId] or colors[5]
 			local maximun, current = 1, 1
@@ -501,7 +520,11 @@ local function GetBarMainRepInfo()
 	local barValueToPass = barValue
 	local friendID, friendRep = factionId and GetFriendshipReputation(factionId) or nil
 	if friendID then
-		barValueToPass = friendRep or 0
+        if IsFactionParagon(factionId) then
+            barValueToPass = select(1, C_Reputation.GetFactionParagonInfo(factionId)) or friendRep or 0
+        else
+            barValueToPass = friendRep or 0
+        end
 	elseif factionId and IsMajorFaction(factionId) then
 		local data = GetMajorFactionData(factionId)
 		local isCapped = HasMaximumRenown(factionId)
@@ -569,7 +592,11 @@ UpdateTablet = function(self)
             local barValueToPass = earnedValue
             local friendID, friendRep = GetFriendshipReputation(factionId)
             if friendID then
-                barValueToPass = friendRep or 0
+                if IsFactionParagon(factionId) then
+                    barValueToPass = select(1, C_Reputation.GetFactionParagonInfo(factionId)) or friendRep or 0
+                else
+                    barValueToPass = friendRep or 0
+                end
             elseif IsMajorFaction(factionId) then
                 -- Major Faction: Korrekten Wert für Paragon verwenden
                 local data = GetMajorFactionData(factionId)
