@@ -1041,7 +1041,7 @@ UpdateBar = function()
 	--print(info.name,barFaction,info.factionId,sessionStart[info.factionId],info.standingId,info.barValue,info.bottomValue,info.topValue,isCapped)
 
     local level  = info.standingId
-    local c1, c2 = config.asciiColors[level], config.asciiColors[level]
+    local c1, c2 = config.asciiColors[level], config.asciiColors[level+1]
 
 	local icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor"
 	block.icon = texture or icon
