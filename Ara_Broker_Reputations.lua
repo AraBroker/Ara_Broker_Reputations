@@ -349,11 +349,16 @@ GetFriendshipReputation = GetFriendshipReputation or nop
 local function GetSessionStartTable(factionId)
 	if (not sessionStartMajorFaction[factionId]) then
 		local data = GetMajorFactionData(factionId)
+        if not data then
+            return nil
+        end
+        local isCapped = HasMaximumRenown(factionId)
+        local startValue = isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
 		sessionStartMajorFaction[factionId] = {
 			startLvl = data.renownLevel,
 			[data.renownLevel] = { 
-				--start = 0, 
-				start = data.renownReputationEarned or 0,
+                -- Keep start aligned with displayed "current" to avoid false startup gains.
+                start = startValue,
 				max = data.renownLevelThreshold }
 		}
 	end
