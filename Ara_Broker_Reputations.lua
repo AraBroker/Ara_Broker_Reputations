@@ -1193,9 +1193,6 @@ local function GetCurrentFactionProgress(factionId, standingId, earnedValue)
 end
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
-    if type(msg) ~= "string" or msg == "" then
-        return
-    end
 
     msg = msg:gsub(" %(%+.*%)" ,"")
     local faction, value, neg, updated = msg:match(fsInc)
