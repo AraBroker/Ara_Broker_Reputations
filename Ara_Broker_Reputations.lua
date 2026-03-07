@@ -17,7 +17,7 @@ local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFact
 local sliderValue, hasSlider, c, nbEntries = 0, false, {}, 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
-local addondevversion = "r97"
+local addondevversion = "r98"
 local defaultConfig = {
     scale = 1.1,
     blockDisplay = "text",
@@ -46,6 +46,7 @@ local defaultConfig = {
         [9]   = { r= .4,  g= 0,   b= .6  }, -- paragon
         [10]  = { r= 0,   g= .75, b= .94 }, -- renown
     },
+    debugAutoSwitch = false,
     useTipTacSkin = true,
 }
 --Looks like Blizzard fixed most of the level shift issues.  The only one I've seen
@@ -452,8 +453,12 @@ local function GetFactionValues(standingId, barValue, bottomValue, topValue, fac
 				maximun, current = nextFriendThreshold - friendThreshold, friendRep - friendThreshold
 			end
 			friendRep = friendRep or 0
-			-- Für Friendship-Reputationen immer Session auf 0 nach Reload
-			session = 0
+            sessionStart[factionId] = sessionStart[factionId] or friendRep
+            session = friendRep - sessionStart[factionId]
+            if session < 0 then
+                sessionStart[factionId] = friendRep
+                session = 0
+            end
 			return current, maximun, color, standingText, nil, session, friendTexture
 		end
 
@@ -1120,12 +1125,77 @@ UpdateBar = function()
     end
 end
 
-local fsInc  = FACTION_STANDING_INCREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
-local fsInc2 = FACTION_STANDING_INCREASED_ACH_BONUS:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
+local fsNumPattern = "([%d%.,%s]+)"
+local fsInc  = FACTION_STANDING_INCREASED:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)")
+local fsInc2 = FACTION_STANDING_INCREASED_ACH_BONUS:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
 local fsInc3 = FACTION_STANDING_INCREASED_GENERIC:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
-local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+local fsDec  = FACTION_STANDING_DECREASED:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)")
+
+local function IsLocalizedRepNumber(raw)
+    return type(raw) == "string" and raw:match("^%s*[%d%.,]+%s*$") ~= nil
+end
+
+local function NormalizeRepNumber(raw)
+    if type(raw) ~= "string" then
+        return tonumber(raw)
+    end
+    local digits = raw:gsub("%D", "")
+    if digits == "" then
+        return nil
+    end
+    return tonumber(digits)
+end
+
+local function DebugAutoSwitchLog(...)
+    if config and config.debugAutoSwitch then
+        print("|cff66ccffAraReputations Debug:|r", ...)
+    end
+end
+
+local lastFactionChangeMsg, lastFactionChangeAt
+local lastFactionSnapshot = {}
+local hasFactionSnapshot = false
+
+local function GetCurrentFactionProgress(factionId, standingId, earnedValue)
+    if not factionId then
+        return nil
+    end
+
+    local friendID, friendRep = GetFriendshipReputation(factionId)
+    if friendID then
+        if IsFactionParagon(factionId) then
+            return select(1, C_Reputation.GetFactionParagonInfo(factionId)) or friendRep or 0
+        end
+        return friendRep or 0
+    end
+
+    if IsMajorFaction(factionId) then
+        local data = GetMajorFactionData(factionId)
+        if not data then
+            return 0
+        end
+        local isCapped = HasMaximumRenown(factionId)
+        if isCapped and IsFactionParagon(factionId) then
+            return select(1, C_Reputation.GetFactionParagonInfo(factionId)) or 0
+        end
+        return isCapped and data.renownLevelThreshold or data.renownReputationEarned or 0
+    end
+
+    if IsFactionParagon(factionId) and standingId == 8 then
+        return select(1, C_Reputation.GetFactionParagonInfo(factionId)) or earnedValue or 0
+    end
+
+    return earnedValue or 0
+end
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
+    local now = GetTime and GetTime() or 0
+    if msg and lastFactionChangeMsg == msg and (now - (lastFactionChangeAt or 0)) < 0.2 then
+        return
+    end
+    lastFactionChangeMsg = msg
+    lastFactionChangeAt = now
+
     msg = msg:gsub(" %(%+.*%)" ,"")
     local faction, value, neg, updated = msg:match(fsInc)
     if not (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
@@ -1141,24 +1211,24 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
             end
         end
     else
-		local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
-		local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
+        local fsInc4 = FACTION_STANDING_INCREASED_ACCOUNT_WIDE:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)")
+        local fsInc5 = FACTION_STANDING_INCREASED_ACH_BONUS_ACCOUNT_WIDE:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"")
 		local fsInc6 = FACTION_STANDING_INCREASED_GENERIC_ACCOUNT_WIDE:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
-		local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", "([0-9]+)"):gsub("%%s", "(.*)")
+        local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)")
         if not faction then
             faction, value, neg, updated = msg:match(fsInc2)
             if not faction then
                 faction = msg:match(fsInc3)
                 if not faction then
-                    faction = msg:match(fsInc4)
+                    faction, value, neg, updated = msg:match(fsInc4)
                     if not faction then
-                        faction = msg:match(fsInc5)
+                        faction, value, neg, updated = msg:match(fsInc5)
                         if not faction then
                             faction = msg:match(fsInc6)
                             if not faction then
                                 faction, value = msg:match(fsDec)
                                 if not faction then
-                                    faction = msg:match(fsDec2)
+                                    faction, value = msg:match(fsDec2)
                                     if not faction then return end
                                 end
                                 neg = true
@@ -1169,10 +1239,16 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
             end
         end
     end
-    if tonumber(faction) then faction, value = value, tonumber(faction) else value = tonumber(value) end
+    if IsLocalizedRepNumber(faction) then
+        faction, value = value, NormalizeRepNumber(faction)
+    else
+        value = NormalizeRepNumber(value)
+    end
+    DebugAutoSwitchLog("CHAT parsed", "faction=", faction or "nil", "value=", value or "nil", "neg=", neg and "true" or "false")
 
     local switch = not neg and config.autoSwitch and (faction ~= GUILD or not config.exceptGuild)
     if faction == GUILD then faction = GetGuildInfo"player" end
+    DebugAutoSwitchLog("Switch decision", "switch=", switch and "true" or "false", "watched=", watchedFaction or "nil")
 
     barFactionHidden = false
 	local scannedFactions = false
@@ -1180,8 +1256,14 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
         for i = 1, GetNumFactions() do
 			scannedFactions = true
             if GetFactionInfo(i) == faction then
+                DebugAutoSwitchLog("Faction found in list", "index=", i, "name=", faction)
                 CallModule("OnFactionChange", faction, i)
-                if switch then return SetWatchedFactionIndex(i) else break end
+                if switch then
+                    DebugAutoSwitchLog("SetWatchedFactionIndex", i)
+                    return SetWatchedFactionIndex(i)
+                else
+                    break
+                end
             end
         end
     end
@@ -1191,12 +1273,68 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
 		-- this happens when the gained faction is collapsed or inactive
 		barFactionHidden = true
 		if factionIdtable[faction] then
+            DebugAutoSwitchLog("Faction hidden/collapsed fallback", "name=", faction, "id=", factionIdtable[faction])
 			watchedFaction = faction
             SetWatchedFactionId(factionIdtable[faction])
 			return UpdateBar()
 		end
 	end
+    if switch then
+        DebugAutoSwitchLog("Switch requested but no faction found", "name=", faction or "nil")
+    end
     if faction == watchedFaction then UpdateBar() end
+end
+
+function f:CHAT_MSG_SYSTEM(msg)
+    return self:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
+end
+
+function f:UPDATE_FACTION()
+    local bestGain, bestIndex, bestName, bestFactionId, bestPrevProgress = 0, nil, nil, nil, nil
+
+    for i = 1, GetNumFactions() do
+        local name, _, standingId, bottomValue, topValue, earnedValue, _, _, isHeader, _, hasRep, _, _, factionId = GetFactionInfo(i)
+        if name and factionId then
+            factionIdtable[name] = factionId
+
+            local progress = GetCurrentFactionProgress(factionId, standingId, earnedValue)
+            local prev = lastFactionSnapshot[factionId]
+            if hasFactionSnapshot and prev ~= nil and progress ~= nil then
+                local gain = progress - prev
+                if gain > bestGain and (not isHeader or hasRep) then
+                    bestGain = gain
+                    bestIndex = i
+                    bestName = name
+                    bestFactionId = factionId
+                    bestPrevProgress = prev
+                end
+            end
+            lastFactionSnapshot[factionId] = progress
+        end
+    end
+
+    if not hasFactionSnapshot then
+        hasFactionSnapshot = true
+        DebugAutoSwitchLog("UPDATE_FACTION baseline initialized")
+        return UpdateBar()
+    end
+
+    if bestGain > 0 then
+        DebugAutoSwitchLog("UPDATE_FACTION gain", "faction=", bestName or "nil", "gain=", bestGain)
+        if bestFactionId and bestPrevProgress ~= nil and sessionStart[bestFactionId] == nil then
+            -- Keep the very first detected gain after reload instead of starting at post-gain value.
+            sessionStart[bestFactionId] = bestPrevProgress
+            DebugAutoSwitchLog("Session baseline restored", "faction=", bestName or "nil", "start=", bestPrevProgress)
+        end
+        local isGuildGain = (bestName == GUILD) or (bestName == GetGuildInfo("player"))
+        local canSwitch = config.autoSwitch and not (config.exceptGuild and isGuildGain)
+        if canSwitch and bestIndex then
+            DebugAutoSwitchLog("UPDATE_FACTION switch", "index=", bestIndex, "name=", bestName)
+            return SetWatchedFactionIndex(bestIndex)
+        end
+    end
+
+    UpdateBar()
 end
 
 function f:MAJOR_FACTION_RENOWN_LEVEL_CHANGED(factionId, newRenownLevel, oldRenownLevel)
@@ -1290,7 +1428,8 @@ function f:SetupConfigMenu()
         { text = "120%", radio = "scale", val = 1.2 },
         { text = "Custom...", radio="scaleX", func=function() StaticPopup_Show"SET_ABR_SCALE" end }, } },
     { text = "Auto switch on reputation gain", check = "autoSwitch", submenu = {
-        { text = "Except for guild reputation", check = "exceptGuild" } } },
+        { text = "Except for guild reputation", check = "exceptGuild" },
+        { text = "Debug auto-switch/session gain", check = "debugAutoSwitch" } } },
     { text = "Apply Color Shift for special Factions", check = "applyColorShift" }, 
     { text = "Sort by Reputation Level", check = "sortByRep" }, 
     { text = "Use TipTac skin (requires TipTac)", check = "useTipTacSkin" },
@@ -1497,6 +1636,8 @@ function f:ADDON_LOADED(addon)
     f:SetScript("OnEnter", Menu_OnEnter)
     f:SetScript("OnLeave", Menu_OnLeave)
     f:RegisterEvent"CHAT_MSG_COMBAT_FACTION_CHANGE"
+    f:RegisterEvent"CHAT_MSG_SYSTEM"
+    f:RegisterEvent"UPDATE_FACTION"
 	if (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
 		f:RegisterEvent"MAJOR_FACTION_RENOWN_LEVEL_CHANGED"
 	end
