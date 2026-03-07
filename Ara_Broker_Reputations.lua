@@ -17,7 +17,7 @@ local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFact
 local sliderValue, hasSlider, c, nbEntries = 0, false, {}, 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
-local addondevversion = "r99"
+local addondevversion = "r100"
 local defaultConfig = {
     scale = 1.1,
     blockDisplay = "text",
@@ -1157,7 +1157,6 @@ local function DebugAutoSwitchLog(...)
     end
 end
 
-local lastFactionChangeMsg, lastFactionChangeAt
 local lastFactionSnapshot = {}
 local hasFactionSnapshot = false
 
@@ -1194,12 +1193,9 @@ local function GetCurrentFactionProgress(factionId, standingId, earnedValue)
 end
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
-    local now = GetTime and GetTime() or 0
-    if msg and lastFactionChangeMsg == msg and (now - (lastFactionChangeAt or 0)) < 0.2 then
+    if type(msg) ~= "string" or msg == "" then
         return
     end
-    lastFactionChangeMsg = msg
-    lastFactionChangeAt = now
 
     msg = msg:gsub(" %(%+.*%)" ,"")
     local faction, value, neg, updated = msg:match(fsInc)
