@@ -1194,15 +1194,19 @@ end
 
 function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
 
-    msg = msg:gsub(" %(%+.*%)" ,"")
-    local faction, value, neg, updated = msg:match(fsInc)
+    if type(msg) ~= "string" then
+        return
+    end
+
+    msg = string.gsub(msg, " %(%+.*%)" ,"")
+    local faction, value, neg, updated = string.match(msg, fsInc)
     if not (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
         if not faction then
-            faction, value, neg, updated = msg:match(fsInc2)
+            faction, value, neg, updated = string.match(msg, fsInc2)
             if not faction then
-                faction = msg:match(fsInc3)
+                faction = string.match(msg, fsInc3)
                 if not faction then
-                    faction, value = msg:match(fsDec)
+                    faction, value = string.match(msg, fsDec)
                     if not faction then return end
                     neg = true
                 end
@@ -1214,19 +1218,19 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
 		local fsInc6 = FACTION_STANDING_INCREASED_GENERIC_ACCOUNT_WIDE:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
         local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)")
         if not faction then
-            faction, value, neg, updated = msg:match(fsInc2)
+            faction, value, neg, updated = string.match(msg, fsInc2)
             if not faction then
-                faction = msg:match(fsInc3)
+                faction = string.match(msg, fsInc3)
                 if not faction then
-                    faction, value, neg, updated = msg:match(fsInc4)
+                    faction, value, neg, updated = string.match(msg, fsInc4)
                     if not faction then
-                        faction, value, neg, updated = msg:match(fsInc5)
+                        faction, value, neg, updated = string.match(msg, fsInc5)
                         if not faction then
-                            faction = msg:match(fsInc6)
+                            faction = string.match(msg, fsInc6)
                             if not faction then
-                                faction, value = msg:match(fsDec)
+                                faction, value = string.match(msg, fsDec)
                                 if not faction then
-                                    faction, value = msg:match(fsDec2)
+                                    faction, value = string.match(msg, fsDec2)
                                     if not faction then return end
                                 end
                                 neg = true
