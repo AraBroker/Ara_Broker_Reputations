@@ -1157,6 +1157,23 @@ local function DebugAutoSwitchLog(...)
     end
 end
 
+local function SafeRepMatch(message, pattern)
+    local ok, a, b, c, d = pcall(string.match, message, pattern)
+    if not ok then
+        return false
+    end
+    if a then
+        return true, a, b, c, d
+    end
+
+    -- Some locales append a trailing "(+bonus)" section; match it without mutating the source message.
+    ok, a, b, c, d = pcall(string.match, message, pattern .. "%s*%(%+.-%)%s*$")
+    if not ok then
+        return false
+    end
+    return true, a, b, c, d
+end
+
 local lastFactionSnapshot = {}
 local hasFactionSnapshot = false
 
@@ -1198,15 +1215,20 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
         return
     end
 
-    msg = string.gsub(msg, " %(%+.*%)" ,"")
-    local faction, value, neg, updated = string.match(msg, fsInc)
+    local okMatch, faction, value, neg, updated = SafeRepMatch(msg, fsInc)
+    if not okMatch then
+        return
+    end
     if not (WOW_PROJECT_ID == WOW_PROJECT_MAINLINE) then
         if not faction then
-            faction, value, neg, updated = string.match(msg, fsInc2)
+            okMatch, faction, value, neg, updated = SafeRepMatch(msg, fsInc2)
+            if not okMatch then return end
             if not faction then
-                faction = string.match(msg, fsInc3)
+                okMatch, faction = SafeRepMatch(msg, fsInc3)
+                if not okMatch then return end
                 if not faction then
-                    faction, value = string.match(msg, fsDec)
+                    okMatch, faction, value = SafeRepMatch(msg, fsDec)
+                    if not okMatch then return end
                     if not faction then return end
                     neg = true
                 end
@@ -1218,19 +1240,26 @@ function f:CHAT_MSG_COMBAT_FACTION_CHANGE(msg)
 		local fsInc6 = FACTION_STANDING_INCREASED_GENERIC_ACCOUNT_WIDE:gsub("%%s", "(.*)"):gsub(" %(%+.*%)" ,"") 
         local fsDec2 = FACTION_STANDING_DECREASED_ACCOUNT_WIDE:gsub("%%d", fsNumPattern):gsub("%%s", "(.*)")
         if not faction then
-            faction, value, neg, updated = string.match(msg, fsInc2)
+            okMatch, faction, value, neg, updated = SafeRepMatch(msg, fsInc2)
+            if not okMatch then return end
             if not faction then
-                faction = string.match(msg, fsInc3)
+                okMatch, faction = SafeRepMatch(msg, fsInc3)
+                if not okMatch then return end
                 if not faction then
-                    faction, value, neg, updated = string.match(msg, fsInc4)
+                    okMatch, faction, value, neg, updated = SafeRepMatch(msg, fsInc4)
+                    if not okMatch then return end
                     if not faction then
-                        faction, value, neg, updated = string.match(msg, fsInc5)
+                        okMatch, faction, value, neg, updated = SafeRepMatch(msg, fsInc5)
+                        if not okMatch then return end
                         if not faction then
-                            faction = string.match(msg, fsInc6)
+                            okMatch, faction = SafeRepMatch(msg, fsInc6)
+                            if not okMatch then return end
                             if not faction then
-                                faction, value = string.match(msg, fsDec)
+                                okMatch, faction, value = SafeRepMatch(msg, fsDec)
+                                if not okMatch then return end
                                 if not faction then
-                                    faction, value = string.match(msg, fsDec2)
+                                    okMatch, faction, value = SafeRepMatch(msg, fsDec2)
+                                    if not okMatch then return end
                                     if not faction then return end
                                 end
                                 neg = true
