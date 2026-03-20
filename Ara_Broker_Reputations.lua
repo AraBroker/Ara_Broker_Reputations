@@ -17,7 +17,7 @@ local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFact
 local sliderValue, hasSlider, c, nbEntries = 0, false, {}, 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
-local addondevversion = "r100"
+local addondevversion = "r101"
 local defaultConfig = {
     scale = 1.1,
     blockDisplay = "text",
@@ -149,6 +149,8 @@ local nameColors = { "ff1919", "ff1919", "ffff00", "19ff19", "19ff19", "19ff19",
 
 local tt, startingRep, info = {}, {}, {}
 local tables = setmetatable( {}, { __mode = "k" } )
+local iconProbe = f:CreateTexture(nil, "BACKGROUND")
+iconProbe:Hide()
 
 local function new(...)
     local t = next(tables)
@@ -317,16 +319,48 @@ local function AddHint(hint)
     button.icon:SetPoint("LEFT", button, "LEFT", -ICON_SIZE-TEXT_OFFSET, 0)
 end
 
+local function IsValidTexture(texture)
+    if texture == nil or texture == "" then
+        return false
+    end
+    if type(texture) == "number" then
+        return texture > 0
+    end
+    iconProbe:SetTexture(texture)
+    return iconProbe:GetTexture() ~= nil
+end
+
 local function MajorFactionTexture(majorFactionData)
 	local kit = majorFactionData.textureKit
-	if (not kit) then return nil end
+	if (not kit) then
+        return nil
+    end
     if kit == "Dream" then kit = "denizens" end
+    local singular = ([[Interface\Icons\UI_MajorFaction_%s]]):format(kit)
+    local plural = ([[Interface\Icons\UI_MajorFactions_%s]]):format(kit)
 
-	if (majorFactionData.expansionID >= 10) then
-		-- yes, the new ones are in plural "MajorFaction[s]" ¯\_(ツ)_/¯
-		return ([[Interface\Icons\UI_MajorFactions_%s]]):format(kit)
-	end
-	return ([[Interface\Icons\UI_MajorFaction_%s]]):format(kit)
+    -- yes, Blizzard uses both naming schemes depending on faction/expansion.
+    if (majorFactionData.expansionID >= 10) then
+        if IsValidTexture(plural) then return plural end
+        plural = ([[Interface\Icons\UI_MajorFactions_%s]]):format(kit:lower())
+        if IsValidTexture(plural) then return plural end
+        plural = ([[Interface\Icons\UI_MajorFactions_ %s]]):format(kit)
+        if IsValidTexture(plural) then return plural end
+        plural = ([[Interface\Icons\UI_MajorFactions_ %s]]):format(kit:lower())
+        if IsValidTexture(plural) then return plural end
+        if IsValidTexture(singular) then return singular end
+        singular = ([[Interface\Icons\UI_MajorFaction_%s]]):format(kit:lower())
+        if IsValidTexture(singular) then return singular end
+        singular = ([[Interface\Icons\UI_MajorFaction_ %s]]):format(kit)
+        if IsValidTexture(singular) then return singular end
+        singular = ([[Interface\Icons\UI_MajorFaction_ %s]]):format(kit:lower())
+        if IsValidTexture(singular) then return singular end
+    else
+        if IsValidTexture(singular) then return singular end
+        if IsValidTexture(plural) then return plural end
+    end
+
+    return nil
 end
 
 local GetFriendshipReputation = GetFriendshipReputation
@@ -378,7 +412,7 @@ local function GetBalanceForMajorFaction(factionId, currentXp, currentLvl)
 		if (data) then
 			local endXp = (currentLvl == i) and currentXp or data.max
 			balance = balance + (endXp - data.start)
-		end
+        end
 	end
 	if (IsFactionParagon(factionId)) then 
 		local currentValue, threshold, _, _ = C_Reputation.GetFactionParagonInfo(factionId);
@@ -928,7 +962,7 @@ end
 
 local block = LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("|cffffb366Ara|r Reputations", {
     type = "data source",
-    icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor",
+    icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ui_hordeicon" or "Interface\\Icons\\ui_allianceicon",
     iconCoords = { 0.075, 0.925, 0.075, 0.925 },
     text = "No Faction",
     OnEnter = function(frame)
@@ -1080,8 +1114,8 @@ UpdateBar = function()
     local level  = info.standingId
     local c1, c2 = config.asciiColors[level], config.asciiColors[level+1]
 
-	local icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor"
-	block.icon = texture or icon
+	local icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ui_hordeicon" or "Interface\\Icons\\ui_allianceicon"
+    block.icon = IsValidTexture(texture) and texture or icon
     if config.blockDisplay == "text" then
         wipe(tt)
         local asciiColor = ("|cff%.2x%.2x%.2x"):format(color.r*255, color.g*255, color.b*255)
@@ -1370,13 +1404,13 @@ end
 
 function f:MAJOR_FACTION_RENOWN_LEVEL_CHANGED(factionId, newRenownLevel, oldRenownLevel)
 	if (not sessionStartMajorFaction[factionId]) then
-		local data = GetMajorFactionData(factionId)
-        if not data then return end
-		sessionStartMajorFaction[factionId] = {
-			startLvl = data.renownLevel,
+    local data = GetMajorFactionData(factionId)
+    if not data then return end
+        sessionStartMajorFaction[factionId] = {
+            startLvl = data.renownLevel,
 			[data.renownLevel] = { start = 0, max = data.renownLevelThreshold }
-		}
-	end
+        }
+    end
 	UpdateBar()
 end
 
