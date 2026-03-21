@@ -1119,6 +1119,8 @@ UpdateBar = function()
     local c1, c2 = config.asciiColors[level], config.asciiColors[level+1]
 
 	local icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ui_hordeicon" or "Interface\\Icons\\ui_allianceicon"
+    -- fallback to old icons if the new ones aren't valid (e.g. Classic)
+    if not IsValidTexture(icon) then icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor" end
     block.icon = IsValidTexture(texture) and texture or icon
     if config.blockDisplay == "text" then
         wipe(tt)
