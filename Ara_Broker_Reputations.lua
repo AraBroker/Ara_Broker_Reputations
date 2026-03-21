@@ -355,6 +355,10 @@ local function MajorFactionTexture(majorFactionData)
         if IsValidTexture(singular) then return singular end
         singular = ([[Interface\Icons\UI_MajorFaction_ %s]]):format(kit:lower())
         if IsValidTexture(singular) then return singular end
+        -- Blizzard really can't decide on a naming scheme for these icons, so we'll hardcode some exceptions to avoid missing icons for major factions.
+        if kit == "origin" then return[[Interface\Icons\UI_MajorFaction_ flames]] end
+        if kit == "root" then return[[Interface\Icons\UI_MajorFaction_ vines]] end
+        if kit == "Light" then return[[Interface\Icons\UI_MajorFaction_ gold]] end
     else
         if IsValidTexture(singular) then return singular end
         if IsValidTexture(plural) then return plural end
