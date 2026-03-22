@@ -330,6 +330,21 @@ local function IsValidTexture(texture)
     return iconProbe:GetTexture() ~= nil
 end
 
+local function GetDefaultFactionIcon()
+    local faction = UnitFactionGroup"player"
+    local modern = faction == "Horde" and "Interface\\Icons\\ui_hordeicon" or "Interface\\Icons\\ui_allianceicon"
+    if IsValidTexture(modern) then
+        return modern
+    end
+
+    local legacy = faction == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor"
+    if IsValidTexture(legacy) then
+        return legacy
+    end
+
+    return "Interface\\Icons\\INV_Misc_QuestionMark"
+end
+
 local function MajorFactionTexture(majorFactionData)
 	local kit = majorFactionData.textureKit
 	if (not kit) then
@@ -966,7 +981,7 @@ end
 
 local block = LibStub:GetLibrary("LibDataBroker-1.1"):NewDataObject("|cffffb366Ara|r Reputations", {
     type = "data source",
-    icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ui_hordeicon" or "Interface\\Icons\\ui_allianceicon",
+    icon = GetDefaultFactionIcon(),
     iconCoords = { 0.075, 0.925, 0.075, 0.925 },
     text = "No Faction",
     OnEnter = function(frame)
@@ -1118,9 +1133,7 @@ UpdateBar = function()
     local level  = info.standingId
     local c1, c2 = config.asciiColors[level], config.asciiColors[level+1]
 
-	local icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ui_hordeicon" or "Interface\\Icons\\ui_allianceicon"
-    -- fallback to old icons if the new ones aren't valid (e.g. Classic)
-    if not IsValidTexture(icon) then icon = UnitFactionGroup"player" == "Horde" and "Interface\\Icons\\ability_warrior_warcry" or "Interface\\Icons\\spell_nature_enchantarmor" end
+    local icon = GetDefaultFactionIcon()
     block.icon = IsValidTexture(texture) and texture or icon
     if config.blockDisplay == "text" then
         wipe(tt)
