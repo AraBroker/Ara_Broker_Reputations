@@ -17,7 +17,7 @@ local updateBeforeBlizzard, watchedFaction, watchedIndex, focusedButton, barFact
 local sliderValue, hasSlider, c, nbEntries = 0, false, {}, 0
 local prevSkin, tiptacBG, tiptacGradient
 local defaultTexture = "Interface\\TargetingFrame\\UI-StatusBar"
-local addondevversion = "r103"
+local addondevversion = "r104"
 local defaultConfig = {
     scale = 1.1,
     blockDisplay = "text",
