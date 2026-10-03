@@ -5,7 +5,8 @@ if WOW_PROJECT_ID == WOW_PROJECT_BURNING_CRUSADE_CLASSIC then wowtextversion = "
 if WOW_PROJECT_ID == WOW_PROJECT_WRATH_CLASSIC then wowtextversion = "Wrath Classic" end
 if WOW_PROJECT_ID == WOW_PROJECT_CATACLYSM_CLASSIC then wowtextversion = "Cataclysm Classic" end
 if WOW_PROJECT_ID == WOW_PROJECT_MISTS_CLASSIC then wowtextversion = "Pandaria Classic" end
-if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then wowtextversion = "Retail" end 
+if WOW_PROJECT_ID == WOW_PROJECT_MAINLINE then wowtextversion = "Retail" end
+if WOW_PROJECT_ID == 18 then wowtextversion = "Forever" end
 
 local addonName = ...
 local BUTTON_HEIGHT, ICON_SIZE, GAP, TEXT_OFFSET, SIMPLE_BAR_WIDTH, ASCII_LENGTH, FONT_SIZE, MAX_ENTRIES =
