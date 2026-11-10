@@ -904,8 +904,10 @@ local function SetSkin()
     if config.useTipTacSkin and TipTac then
 		tiptacVer = C_AddOns.GetAddOnMetadata("TipTac","Version")
 		-- print("TipTac version is: ",tiptacVer)
-		if tiptacVer >= "25.08.13" then
+		if tiptacVer >= "25.08.13" and WOW_PROJECT_ID ~= 18 then
 			tiptacVerCheck = true
+        elseif WOW_PROJECT_ID == 18 then
+            tiptacVerCheck = true
 		else
 			print("\124cffFF0000Ara_Broker_Reputations: Your installed copy of TipTac is out of date. Please update to version 25.08.13 or newer.\124r")
 		end
